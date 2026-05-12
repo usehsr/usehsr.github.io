@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HSR — Hackley Spikeball Rated</title>
+<title>HSR</title>
 <meta name="theme-color" content="#0a0a00">
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -1791,16 +1791,15 @@ async function renderRules() {
     <h2>Game Setup</h2>
     <p>Spikeball is played 1v1 (singles) or 2v2 (doubles). Set up the Spikeball net in an open area with at least 6 feet clearance in all directions.</p>
     <ul>
-      <li>The team that wins the coin toss serves first.</li>
-      <li>Server stands behind the serving zone (roughly 6 feet from the net).</li>
+      <li>The team with lower elo serves first.</li>      
       <li>Teams can spread out in any direction once the ball is served.</li>
     </ul>
 
     <h2>Serving</h2>
-    <p>The server must toss the ball up and hit it down onto the net. Serves must be from outside the service zone. Players have two attempts to serve.</p>
+    <p>The server must toss the ball up and hit it down onto the net.</p>
     <ul>
-      <li>Ball must bounce off net cleanly — no rim shots on serves.</li>
-      <li>Receiving team can't move until ball is hit.</li>
+      <li>Ball must bounce off net cleanly — no pocket shots on serves.</li>
+      <li>Serves are strictly friendly.</li>
       <li>A service fault (2nd fault) gives the point to the receiving team.</li>
     </ul>
 
@@ -1809,12 +1808,12 @@ async function renderRules() {
     <ul>
       <li>No player can hit the ball twice in a row.</li>
       <li>The ball may not touch the rim of the net.</li>
-      <li>If the ball hits the rim, the rally is replayed (let).</li>
-      <li>Body hits are illegal — hands/fists only.</li>
+      <li>If the ball hits the rim, the point goes to the opposing team.</li>
+      <li>Body hits are allowed and don't count as a touch.</li>
     </ul>
 
     <h2>Scoring</h2>
-    <p>A point is scored when the opposing team fails to return the ball. Standard games are played to 21 (win by 2). Win scores available: 3, 7, 11, 15, 17, 21.</p>
+    <p>A point is scored when the opposing team fails to return the ball. Standard games are played to 11 (win by 2). Win scores available: 3, 7, 11, 15, 17, 21.</p>
 
     <h2>Match Modes</h2>
     <ul>
@@ -1830,6 +1829,7 @@ async function renderRules() {
       <li><strong>9.0+</strong> — Elite tier; virtually never loses.</li>
       <li><strong>8.0+</strong> — Very strong; occasional losses only.</li>
       <li><strong>5.0</strong> — Average rated player.</li>
+      <li><strong>5.0-</strong> — Worse then average.</li>
     </ul>
 
     <h2>Disputes</h2>

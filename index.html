@@ -1,0 +1,2156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HSR — Hackley Spikeball Rated</title>
+<meta name="theme-color" content="#0a0a00">
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>(function(){ emailjs.init("gWgHwkPBzHaIeiuRW"); })();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080800;
+  --bg-card:#0f0f04;
+  --bg-card-hover:#161608;
+  --bg-input:#121208;
+  --bg-surface:#0d0d02;
+  --border:#2a2a0a;
+  --border-light:#3a3a14;
+  --border-focus:#f5c800;
+  --text:#f0f0e0;
+  --text-secondary:#8a8a60;
+  --text-muted:#4a4a30;
+  --yellow:#f5c800;
+  --yellow-dim:rgba(245,200,0,0.1);
+  --yellow-glow:rgba(245,200,0,0.25);
+  --black:#000000;
+  --red:#ff3520;
+  --red-dim:rgba(255,53,32,0.12);
+  --green:#39d353;
+  --green-dim:rgba(57,211,83,0.1);
+  --blue:#4a9eff;
+  --blue-dim:rgba(74,158,255,0.1);
+  --orange:#ff8c00;
+  --orange-dim:rgba(255,140,0,0.1);
+  --radius:10px;
+  --font:'Barlow',system-ui,sans-serif;
+  --display:'Bebas Neue',system-ui,sans-serif;
+  --mono:'JetBrains Mono',monospace;
+  --header-h:58px;
+}
+html{font-size:16px;scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:'';position:fixed;top:0;left:0;right:0;height:500px;background:radial-gradient(ellipse 60% 30% at 50% -5%,rgba(245,200,0,0.06) 0%,transparent 70%);pointer-events:none;z-index:0}
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.6}
+a{color:var(--yellow);text-decoration:none}
+button{font-family:var(--font);cursor:pointer;border:none;outline:none;transition:all .18s}
+input,textarea,select{font-family:var(--font);background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:.9rem;width:100%;transition:border-color .2s,box-shadow .2s}
+input:focus,textarea:focus,select:focus{border-color:var(--border-focus);outline:none;box-shadow:0 0 0 3px rgba(245,200,0,0.1)}
+textarea{resize:vertical;min-height:80px}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238a8a60' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+::placeholder{color:var(--text-muted)}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:3px}
+
+/* ===== LAYOUT ===== */
+#app{display:flex;flex-direction:column;min-height:100vh;position:relative;z-index:1}
+header{position:sticky;top:0;z-index:200;background:rgba(8,8,0,0.92);border-bottom:1px solid var(--border);backdrop-filter:blur(20px)}
+.header-inner{max-width:1400px;margin:0 auto;padding:0 20px;height:var(--header-h);display:flex;align-items:center;gap:14px}
+.logo{font-family:var(--display);font-size:1.8rem;letter-spacing:.04em;color:var(--yellow);display:flex;align-items:center;gap:10px;flex-shrink:0;text-shadow:0 0 20px rgba(245,200,0,0.4)}
+.logo-icon{font-size:1.3rem}
+.logo-sub{font-family:var(--font);font-size:.55rem;font-weight:800;color:var(--text-muted);letter-spacing:.15em;text-transform:uppercase;margin-left:2px;align-self:flex-end;margin-bottom:6px}
+nav{display:flex;gap:2px;margin-left:8px}
+nav button{padding:7px 13px;border-radius:7px;font-size:.78rem;font-weight:700;color:var(--text-secondary);background:transparent;transition:all .18s;border:1px solid transparent;text-transform:uppercase;letter-spacing:.06em}
+nav button:hover{color:var(--text);background:rgba(245,200,0,0.06)}
+nav button.active{color:var(--yellow);background:var(--yellow-dim);border-color:rgba(245,200,0,0.2)}
+.header-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.elo-badge{display:flex;align-items:center;gap:5px;padding:5px 12px;background:var(--yellow-dim);border:1px solid rgba(245,200,0,0.25);border-radius:7px;font-size:.78rem;font-weight:800;color:var(--yellow);font-family:var(--mono)}
+.elo-badge-label{font-size:.6rem;color:var(--text-muted);margin-right:2px;font-family:var(--font);font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+
+/* ===== BUTTONS ===== */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 18px;border-radius:8px;font-size:.82rem;font-weight:800;transition:all .18s;white-space:nowrap;border:1px solid transparent;font-family:var(--font);text-transform:uppercase;letter-spacing:.05em}
+.btn-primary{background:var(--yellow);color:var(--black);box-shadow:0 0 16px rgba(245,200,0,0.2)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(245,200,0,0.4);background:#ffd900}
+.btn-secondary{background:var(--bg-card);color:var(--text);border-color:var(--border)}
+.btn-secondary:hover{background:var(--bg-card-hover);border-color:var(--border-light)}
+.btn-danger{background:var(--red-dim);color:var(--red);border-color:rgba(255,53,32,0.3)}
+.btn-danger:hover{background:var(--red);color:#fff}
+.btn-green{background:var(--green-dim);color:var(--green);border-color:rgba(57,211,83,0.3)}
+.btn-green:hover{background:var(--green);color:#000}
+.btn-sm{padding:5px 10px;font-size:.72rem}
+.btn-ghost{background:transparent;color:var(--text-secondary);border-color:transparent;padding:6px 10px}
+.btn-ghost:hover{color:var(--text);background:rgba(245,200,0,0.05)}
+.btn-icon{width:34px;height:34px;padding:0;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(245,200,0,0.06);border:1px solid var(--border);color:var(--text-secondary)}
+.btn-icon:hover{color:var(--yellow);border-color:rgba(245,200,0,0.3)}
+
+/* ===== MAIN ===== */
+main{flex:1;max-width:1400px;margin:0 auto;padding:24px 20px;width:100%}
+.page-title{font-family:var(--display);font-size:2.4rem;letter-spacing:.06em;color:var(--text);margin-bottom:20px;display:flex;align-items:center;gap:12px}
+.page-title .accent{color:var(--yellow)}
+
+/* ===== CARDS ===== */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .2s,box-shadow .2s}
+.card:hover{border-color:var(--border-light)}
+.card-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-header-title{font-family:var(--display);font-size:1.1rem;letter-spacing:.06em;color:var(--text)}
+.card-body{padding:20px}
+
+/* ===== BADGES ===== */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap}
+.badge-yellow{background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,200,0,0.25)}
+.badge-red{background:var(--red-dim);color:var(--red)}
+.badge-green{background:var(--green-dim);color:var(--green)}
+.badge-muted{background:rgba(255,255,255,0.04);color:var(--text-muted)}
+.badge-blue{background:var(--blue-dim);color:var(--blue)}
+
+/* ===== STAT CARDS ===== */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+.stat-card{background:var(--bg-surface);border-radius:8px;padding:14px;border:1px solid var(--border);text-align:center}
+.stat-label{font-size:.6rem;text-transform:uppercase;letter-spacing:.12em;color:var(--text-muted);margin-bottom:4px;font-weight:700}
+.stat-value{font-family:var(--display);font-size:2rem;letter-spacing:.04em;line-height:1}
+.stat-value.yellow{color:var(--yellow)}
+.stat-value.green{color:var(--green)}
+.stat-value.red{color:var(--red)}
+.stat-value.blue{color:var(--blue)}
+
+/* ===== TABS ===== */
+.tab-bar{display:flex;gap:1px;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto}
+.tab-bar button{padding:9px 18px;font-size:.75rem;font-weight:800;color:var(--text-muted);background:transparent;border-bottom:2px solid transparent;transition:all .18s;margin-bottom:-1px;white-space:nowrap;text-transform:uppercase;letter-spacing:.06em}
+.tab-bar button:hover{color:var(--text)}
+.tab-bar button.active{color:var(--yellow);border-bottom-color:var(--yellow)}
+
+/* ===== MODAL ===== */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .22s;backdrop-filter:blur(6px)}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg-card);border:1px solid var(--border-light);border-radius:14px;width:100%;max-width:620px;max-height:90vh;overflow-y:auto;transform:scale(.94) translateY(8px);transition:transform .22s cubic-bezier(.34,1.56,.64,1)}
+.modal-overlay.open .modal{transform:scale(1) translateY(0)}
+.modal-header{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg-card);z-index:5}
+.modal-header h2{font-family:var(--display);font-size:1.4rem;letter-spacing:.06em}
+.modal-close{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--text-muted);font-size:1.2rem;transition:all .18s}
+.modal-close:hover{background:var(--bg-surface);color:var(--text)}
+.modal-body{padding:22px}
+.modal-footer{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;position:sticky;bottom:0;background:var(--bg-card)}
+
+/* ===== FORMS ===== */
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:.72rem;font-weight:800;color:var(--text-secondary);margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em}
+.form-group .hint{font-size:.7rem;color:var(--text-muted);margin-top:3px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ===== TOAST ===== */
+.toast-container{position:fixed;top:70px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:7px;pointer-events:none}
+.toast{padding:12px 18px;border-radius:9px;font-size:.82rem;font-weight:700;max-width:340px;box-shadow:0 8px 30px rgba(0,0,0,.5);pointer-events:all;display:flex;align-items:center;gap:8px;animation:slideIn .25s ease}
+.toast-success{background:var(--yellow);color:var(--black)}
+.toast-error{background:var(--red);color:#fff}
+.toast-info{background:var(--bg-card);color:var(--text);border:1px solid var(--border-light)}
+.toast-warn{background:var(--orange);color:#000}
+@keyframes slideIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes fadeOut{to{transform:translateX(110%);opacity:0}}
+
+/* ===== AUTH ===== */
+.auth-container{max-width:440px;margin:60px auto;padding:0 20px}
+.auth-card{background:var(--bg-card);border:1px solid var(--border-light);border-radius:14px;padding:36px}
+.auth-logo{text-align:center;margin-bottom:28px}
+.auth-logo .big{font-family:var(--display);font-size:4rem;color:var(--yellow);text-shadow:0 0 30px rgba(245,200,0,0.5);letter-spacing:.1em;line-height:1}
+.auth-logo .sub{font-size:.7rem;font-weight:800;color:var(--text-muted);letter-spacing:.2em;text-transform:uppercase;margin-top:2px}
+.auth-title{font-family:var(--display);font-size:1.6rem;letter-spacing:.06em;margin-bottom:4px;text-align:center}
+.auth-sub{font-size:.82rem;color:var(--text-secondary);margin-bottom:22px;text-align:center}
+.auth-switch{text-align:center;font-size:.82rem;color:var(--text-secondary);margin-top:14px}
+
+/* ===== SPINNER / SKELETON ===== */
+.spinner{width:22px;height:22px;border:2px solid var(--border-light);border-top-color:var(--yellow);border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-page{display:flex;align-items:center;justify-content:center;height:300px;flex-direction:column;gap:14px;color:var(--text-muted);font-size:.85rem}
+
+/* ===== EMPTY STATE ===== */
+.empty-state{text-align:center;padding:60px 20px;color:var(--text-muted)}
+.empty-state .emoji{font-size:3rem;margin-bottom:12px;display:block}
+.empty-state h3{font-family:var(--display);font-size:1.6rem;letter-spacing:.06em;color:var(--text-secondary);margin-bottom:6px}
+.empty-state p{font-size:.84rem}
+
+/* ===== PAGE ANIMATION ===== */
+.page{animation:pageIn .2s ease}
+@keyframes pageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ===== MOBILE NAV ===== */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:rgba(8,8,0,.96);border-top:1px solid var(--border);backdrop-filter:blur(16px);padding:8px 0 14px;z-index:200}
+.mobile-nav-inner{display:flex;justify-content:space-around}
+.mobile-nav button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 10px;background:transparent;color:var(--text-muted);font-size:.55rem;font-weight:800;border-radius:8px;letter-spacing:.06em;text-transform:uppercase}
+.mobile-nav button.active{color:var(--yellow)}
+.mobile-nav button svg{width:20px;height:20px}
+
+/* ===== MATCH CARDS ===== */
+.match-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
+.match-card{cursor:pointer;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);transition:all .2s;overflow:hidden}
+.match-card:hover{border-color:rgba(245,200,0,0.3);box-shadow:0 8px 30px rgba(0,0,0,.5);transform:translateY(-1px)}
+.match-card-top{padding:14px 18px;position:relative}
+.match-card-type{font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.match-players{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.match-player{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
+.match-player-name{font-weight:700;font-size:.85rem;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.match-player-elo{font-family:var(--display);font-size:1.2rem;letter-spacing:.04em;color:var(--yellow)}
+.match-score-center{text-align:center;flex-shrink:0}
+.match-score-num{font-family:var(--display);font-size:2.2rem;letter-spacing:.04em;line-height:1;color:var(--text)}
+.match-score-sep{color:var(--text-muted);font-weight:800;margin:0 4px}
+.match-card-bottom{padding:10px 18px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:.7rem;color:var(--text-muted)}
+.match-winner-badge{font-size:.62rem;font-weight:800;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:.06em}
+.match-winner-badge.singles{background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,200,0,0.2)}
+.match-winner-badge.doubles{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(74,158,255,0.2)}
+.type-badge-competitive{color:var(--yellow)}
+.type-badge-casual{color:var(--text-muted)}
+.type-badge-tournament{color:var(--orange);text-shadow:0 0 6px rgba(255,140,0,0.4)}
+.elo-delta-pos{color:var(--green);font-family:var(--mono);font-weight:700}
+.elo-delta-neg{color:var(--red);font-family:var(--mono);font-weight:700}
+
+/* ===== LEADERBOARD ===== */
+.lb-row{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--border);transition:background .15s;cursor:pointer}
+.lb-row:hover{background:var(--bg-card-hover)}
+.lb-row:last-child{border:none}
+.lb-rank{width:36px;font-family:var(--display);font-size:1.6rem;letter-spacing:.04em;color:var(--text-muted);text-align:center;line-height:1}
+.lb-rank.r1{color:var(--yellow);text-shadow:0 0 12px rgba(245,200,0,0.5)}
+.lb-rank.r2{color:#c0c0c0}
+.lb-rank.r3{color:#cd7f32}
+.lb-avatar{width:40px;height:40px;border-radius:50%;flex-shrink:0;object-fit:cover;border:2px solid var(--border)}
+.lb-avatar-init{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:900;flex-shrink:0;border:2px solid var(--border)}
+.lb-info{flex:1;min-width:0}
+.lb-name{font-size:.9rem;font-weight:800;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.lb-sub{font-size:.7rem;color:var(--text-muted);margin-top:2px}
+.lb-elo{font-family:var(--display);font-size:1.6rem;letter-spacing:.04em;color:var(--yellow);text-align:right}
+.lb-trend{font-size:.65rem;font-family:var(--mono);font-weight:700}
+
+/* ===== PROFILE ===== */
+.profile-header{display:flex;align-items:flex-start;gap:22px;margin-bottom:24px;padding:24px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);position:relative;overflow:hidden}
+.profile-header::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent,var(--yellow),transparent)}
+.profile-avatar-large{width:80px;height:80px;border-radius:50%;flex-shrink:0;object-fit:cover;border:2px solid var(--border-light)}
+.profile-avatar-large-init{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:900;flex-shrink:0;border:2px solid var(--border-light)}
+.profile-name{font-family:var(--display);font-size:2.2rem;letter-spacing:.06em;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.profile-bio{font-size:.84rem;color:var(--text-secondary);margin-top:6px;max-width:500px;line-height:1.6}
+
+/* ===== STREAK BADGE ===== */
+.streak-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:4px;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+.streak-comp{background:rgba(245,200,0,0.15);color:var(--yellow);border:1px solid rgba(245,200,0,0.3)}
+.streak-casual{background:rgba(255,255,255,0.05);color:var(--text-muted);border:1px solid var(--border)}
+
+/* ===== PLACEMENT ===== */
+.placement-card{background:linear-gradient(135deg,var(--bg-card),rgba(245,200,0,0.05));border:1px solid rgba(245,200,0,0.2);border-radius:var(--radius);padding:24px;text-align:center;margin-bottom:20px}
+.placement-title{font-family:var(--display);font-size:1.8rem;letter-spacing:.06em;color:var(--yellow);margin-bottom:8px}
+
+/* ===== MATCH DETAIL ===== */
+.match-detail-grid{display:grid;grid-template-columns:1fr 320px;gap:18px}
+.play-by-play-item{display:flex;align-items:center;gap:10px;padding:8px 14px;border-radius:6px;font-size:.8rem;font-weight:600;margin-bottom:4px}
+.play-by-play-item.team1{background:rgba(245,200,0,0.06);border-left:2px solid var(--yellow)}
+.play-by-play-item.team2{background:rgba(74,158,255,0.06);border-left:2px solid var(--blue);flex-direction:row-reverse;text-align:right}
+.play-score{font-family:var(--display);font-size:1rem;color:var(--text-muted);margin-left:auto}
+.play-by-play-item.team2 .play-score{margin-left:0;margin-right:auto}
+
+/* ===== ADMIN TABLE ===== */
+.admin-table{width:100%;border-collapse:collapse}
+.admin-table th{text-align:left;font-size:.62rem;text-transform:uppercase;letter-spacing:.12em;color:var(--text-muted);padding:9px 14px;border-bottom:1px solid var(--border);font-weight:800}
+.admin-table td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:.82rem;vertical-align:middle}
+.admin-table tr:hover td{background:var(--bg-card-hover)}
+.admin-select{padding:4px 8px;font-size:.72rem;width:auto;height:auto;border-radius:6px}
+
+/* ===== FILTER BAR ===== */
+.filter-bar{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap;align-items:center}
+.filter-pill{padding:5px 14px;border-radius:4px;font-size:.72rem;font-weight:800;background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);cursor:pointer;transition:all .18s;text-transform:uppercase;letter-spacing:.06em}
+.filter-pill:hover,.filter-pill.active{background:var(--yellow-dim);border-color:rgba(245,200,0,0.25);color:var(--yellow)}
+.sort-select{padding:5px 12px;border-radius:4px;font-size:.72rem;font-weight:700;background:var(--bg-card);border:1px solid var(--border);color:var(--text-secondary);margin-left:auto;width:auto;height:auto}
+
+/* ===== DISPUTE ===== */
+.dispute-reason-btn{padding:8px 14px;border-radius:6px;font-size:.75rem;font-weight:700;background:var(--bg-surface);border:1px solid var(--border);color:var(--text-secondary);cursor:pointer;transition:all .15s;text-align:left}
+.dispute-reason-btn:hover,.dispute-reason-btn.selected{background:var(--red-dim);border-color:rgba(255,53,32,0.3);color:var(--red)}
+
+/* ===== NEW MATCH WIZARD ===== */
+.match-wizard-step{display:none}.match-wizard-step.active{display:block}
+.player-select-card{padding:12px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg-surface);cursor:pointer;transition:all .15s;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.player-select-card:hover,.player-select-card.selected{border-color:rgba(245,200,0,0.4);background:var(--yellow-dim)}
+.player-select-card .player-elo-badge{font-family:var(--display);font-size:1.1rem;color:var(--yellow);margin-left:auto}
+.score-option{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:8px;border:1px solid var(--border);background:var(--bg-surface);font-family:var(--display);font-size:1.4rem;cursor:pointer;transition:all .15s}
+.score-option:hover,.score-option.selected{border-color:var(--yellow);background:var(--yellow-dim);color:var(--yellow)}
+
+/* ===== ELO ANIMATION ===== */
+.elo-popup-container{position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:9998;pointer-events:none;display:flex;flex-direction:column;gap:8px;align-items:center}
+.elo-popup{font-family:var(--display);font-size:1.8rem;letter-spacing:.06em;padding:8px 24px;border-radius:8px;animation:eloFloat 2.5s ease forwards}
+.elo-popup.pos{color:var(--yellow);background:rgba(245,200,0,0.15);border:1px solid rgba(245,200,0,0.3);text-shadow:0 0 20px rgba(245,200,0,0.6)}
+.elo-popup.neg{color:var(--red);background:var(--red-dim);border:1px solid rgba(255,53,32,0.3)}
+@keyframes eloFloat{0%{opacity:0;transform:translateY(10px)}20%{opacity:1;transform:translateY(0)}80%{opacity:1;transform:translateY(-8px)}100%{opacity:0;transform:translateY(-20px)}}
+
+/* ===== CHART WRAPPER ===== */
+.chart-wrap{background:var(--bg-surface);border-radius:8px;padding:16px;border:1px solid var(--border);margin-bottom:16px}
+.chart-wrap canvas{max-height:220px}
+
+/* ===== INTEGRITY BANNER ===== */
+.integrity-banner{padding:12px 18px;border-radius:8px;font-size:.78rem;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:16px}
+.integrity-ok{background:var(--green-dim);color:var(--green);border:1px solid rgba(57,211,83,0.2)}
+.integrity-warn{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,53,32,0.2)}
+
+/* ===== RULES ===== */
+.rules-content{line-height:1.8;color:var(--text-secondary);font-size:.88rem}
+.rules-content h2{font-family:var(--display);font-size:1.4rem;letter-spacing:.06em;color:var(--yellow);margin:20px 0 8px}
+.rules-content p{margin-bottom:10px}
+.rules-content ul{padding-left:20px;margin-bottom:10px}
+
+/* ===== DOUBLES BADGE ===== */
+.partner-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;font-size:.65rem;font-weight:800;background:var(--blue-dim);color:var(--blue);border:1px solid rgba(74,158,255,0.2);text-transform:uppercase;letter-spacing:.06em}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:900px){.match-detail-grid{grid-template-columns:1fr}.stats-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){
+  nav{display:none}
+  main{padding:14px 12px;padding-bottom:80px}
+  .mobile-nav{display:block}
+  .match-grid{grid-template-columns:1fr}
+  .form-row{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .header-inner{padding:0 12px}
+  .logo-sub{display:none}
+}
+
+/* ===== INTRO ===== */
+#intro-overlay{position:fixed;inset:0;z-index:9999;background:#030300;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0;transition:opacity .6s ease}
+.intro-logo{font-family:var(--display);font-size:6rem;letter-spacing:.12em;color:var(--yellow);text-shadow:0 0 60px rgba(245,200,0,0.8),0 0 120px rgba(245,200,0,0.4);opacity:0;transform:scale(.7);animation:introLogo .8s cubic-bezier(.34,1.56,.64,1) .2s forwards}
+@keyframes introLogo{to{opacity:1;transform:scale(1)}}
+.intro-sub{font-size:.75rem;font-weight:800;letter-spacing:.3em;text-transform:uppercase;color:var(--text-muted);opacity:0;animation:introFade .5s ease 1s forwards;margin-top:8px}
+@keyframes introFade{to{opacity:1}}
+.intro-bar{width:180px;height:2px;background:var(--border);border-radius:1px;margin-top:32px;overflow:hidden;opacity:0;animation:introFade .3s ease 1.2s forwards}
+.intro-bar-fill{height:100%;width:0%;background:var(--yellow);border-radius:1px;animation:introBar .8s ease 1.3s forwards;box-shadow:0 0 12px var(--yellow)}
+@keyframes introBar{to{width:100%}}
+#intro-overlay.out{opacity:0;pointer-events:none}
+</style>
+</head>
+<body>
+
+<div id="intro-overlay">
+  <div class="intro-logo">HSR</div>
+  <div class="intro-sub">Hackley Spikeball Rated</div>
+  <div class="intro-bar"><div class="intro-bar-fill"></div></div>
+</div>
+
+<div id="app">
+  <header id="main-header" style="display:none">
+    <div class="header-inner">
+      <div class="logo"><span class="logo-icon">🏐</span>HSR<span class="logo-sub">Spikeball</span></div>
+      <nav id="main-nav">
+        <button data-page="matches">Matches</button>
+        <button data-page="leaderboard">Leaderboard</button>
+        <button data-page="rules">Rules</button>
+        <button data-page="admin" id="admin-nav-btn" style="display:none">⚙ Admin</button>
+      </nav>
+      <div class="header-right">
+        <div class="elo-badge">
+          <span class="elo-badge-label">ELO</span>
+          <span id="header-elo">—</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="profile-btn" style="font-weight:800">Profile</button>
+        <button class="btn btn-ghost btn-sm" id="logout-btn">Logout</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="mobile-nav" id="mobile-nav" style="display:none">
+    <div class="mobile-nav-inner">
+      <button data-page="matches"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12l4-4 4 4m-4-4v8"/></svg>Matches</button>
+      <button data-page="leaderboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Ranks</button>
+      <button data-page="profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile</button>
+      <button data-page="rules"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Rules</button>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+  <div class="elo-popup-container" id="elo-popup-container"></div>
+  <main id="page-content"></main>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal" id="modal" role="dialog" aria-modal="true">
+    <div class="modal-header">
+      <h2 id="modal-title"></h2>
+      <button class="modal-close" id="modal-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ===================== FIREBASE =====================
+const DB = 'https://hackleyspikeball-default-rtdb.firebaseio.com';
+async function dbGet(p) { const r = await fetch(`${DB}/${p}.json`); if (!r.ok) throw new Error('DB read fail'); return r.json(); }
+async function dbSet(p, d) { const r = await fetch(`${DB}/${p}.json`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) }); if (!r.ok) throw new Error('DB write fail'); return r.json(); }
+async function dbPush(p, d) { const r = await fetch(`${DB}/${p}.json`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) }); if (!r.ok) throw new Error('DB push fail'); return r.json(); }
+async function dbUpdate(p, d) { const r = await fetch(`${DB}/${p}.json`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) }); if (!r.ok) throw new Error('DB update fail'); return r.json(); }
+async function dbDelete(p) { const r = await fetch(`${DB}/${p}.json`, { method: 'DELETE' }); if (!r.ok) throw new Error('DB delete fail'); }
+
+// ===================== AUTH =====================
+let currentUser = null;
+function saveSession(u) { currentUser = u; try { localStorage.setItem('hsr_s', JSON.stringify(u)); } catch (e) { } }
+function loadSession() { try { currentUser = JSON.parse(localStorage.getItem('hsr_s')); } catch (e) { currentUser = null; } return currentUser; }
+function clearSession() { currentUser = null; try { localStorage.removeItem('hsr_s'); } catch (e) { } }
+
+// ===================== UTILS =====================
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function initials(n) { return (n || '?').trim().split(/\s+/).map(w => w[0] || '').join('').toUpperCase().slice(0, 2) || '?'; }
+async function hashPw(pw) { const enc = new TextEncoder().encode(pw + 'hsr_salt_2025'); const buf = await crypto.subtle.digest('SHA-256', enc); return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join(''); }
+function timeAgo(ts) { const s = Math.floor((Date.now() - ts) / 1000); if (s < 60) return 'just now'; if (s < 3600) return Math.floor(s / 60) + 'm ago'; if (s < 86400) return Math.floor(s / 3600) + 'h ago'; return Math.floor(s / 86400) + 'd ago'; }
+function fmtElo(e) { return (e || 0).toFixed(2); }
+function avatarColor(n) { const c = ['#f5c800', '#4a9eff', '#39d353', '#ff8c00', '#ff3520', '#a855f7', '#06b6d4']; let h = 0; for (let x of (n || 'U')) h = (h + x.charCodeAt(0)) % c.length; return c[h]; }
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+// ===================== TOAST =====================
+function showToast(msg, type = 'info', dur = 3200) {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast toast-${type}`;
+  const icons = { success: '✓', error: '✕', info: 'ℹ', warn: '⚠' };
+  t.innerHTML = `<span>${icons[type] || 'ℹ'}</span><span>${esc(msg)}</span>`;
+  c.appendChild(t);
+  setTimeout(() => { t.style.animation = 'fadeOut .3s ease forwards'; setTimeout(() => t.remove(), 300); }, dur);
+}
+
+// ===================== ELO POPUP =====================
+function showEloPopup(delta) {
+  const c = document.getElementById('elo-popup-container');
+  const el = document.createElement('div');
+  el.className = `elo-popup ${delta >= 0 ? 'pos' : 'neg'}`;
+  el.textContent = (delta >= 0 ? '+' : '') + delta.toFixed(2) + ' ELO';
+  c.appendChild(el);
+  setTimeout(() => el.remove(), 2700);
+}
+
+// ===================== MODAL =====================
+function openModal(title, body, footer) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('modal-footer').innerHTML = footer || '';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal() { document.getElementById('modal-overlay').classList.remove('open'); }
+document.getElementById('modal-close').onclick = closeModal;
+document.getElementById('modal-overlay').onclick = e => { if (e.target === e.currentTarget) closeModal(); };
+
+// ===================== NAVIGATION =====================
+let currentPage = 'matches';
+let currentMatchId = null;
+let currentProfileId = null;
+
+function navigate(page, data) {
+  currentPage = page;
+  if (page === 'match-detail') currentMatchId = data;
+  if (page === 'profile') currentProfileId = data || (currentUser && currentUser.id);
+  document.querySelectorAll('#main-nav button, .mobile-nav button[data-page]').forEach(b => {
+    b.classList.toggle('active', b.dataset.page === page);
+  });
+  renderPage();
+}
+
+document.getElementById('main-nav').addEventListener('click', e => { const b = e.target.closest('[data-page]'); if (b) navigate(b.dataset.page); });
+document.querySelector('.mobile-nav-inner')?.addEventListener('click', e => { const b = e.target.closest('[data-page]'); if (b) navigate(b.dataset.page); });
+document.getElementById('logout-btn').onclick = () => { clearSession(); init(); };
+document.getElementById('profile-btn').onclick = () => navigate('profile', currentUser?.id);
+
+// ===================== CRYPTO HASH =====================
+async function hashMatch(data) {
+  const str = JSON.stringify(data);
+  const enc = new TextEncoder().encode(str);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+}
+
+// ===================== ELO ENGINE =====================
+const ELO_BASE = 5.0;
+const ELO_MAX = 10.0;
+const ELO_MIN = 0.0;
+const PLACEMENT_GAMES = 5;
+const HIGH_VOL_GAMES = 10;
+
+function computeEloFromLedger(transactions) {
+  const validTx = (transactions || []).filter(t => t.valid !== false);
+  return validTx.reduce((sum, t) => sum + (t.delta || 0), ELO_BASE);
+}
+
+function getPlayerPhase(gamesPlayed) {
+  if (gamesPlayed < PLACEMENT_GAMES) return 'placement';
+  if (gamesPlayed < PLACEMENT_GAMES + HIGH_VOL_GAMES) return 'volatile';
+  return 'stable';
+}
+
+// K-factor based on phase and elo (diminishing returns at high elo)
+function getKFactor(phase, currentElo) {
+  let base;
+  if (phase === 'placement') base = 1.2;
+  else if (phase === 'volatile') base = 0.7;
+  else base = 0.35;
+  // Diminishing returns at higher elos
+  const diminish = Math.max(0.3, 1 - Math.pow(Math.max(0, currentElo - 6) / 6, 1.5) * 0.7);
+  return base * diminish;
+}
+
+// Expected win probability using logistic function
+function expectedScore(eloA, eloB) {
+  return 1 / (1 + Math.pow(10, (eloB - eloA) / 2));
+}
+
+// Score factor: blowout vs close game
+function getScoreFactor(winnerScore, loserScore, maxScore) {
+  const margin = winnerScore - loserScore;
+  const normalized = margin / maxScore;
+  // 0.6 for very close, 1.4 for blowout
+  return 0.6 + normalized * 0.8;
+}
+
+// Type multiplier
+function getTypeMultiplier(type) {
+  if (type === 'casual') return 0.5;
+  if (type === 'tournament') return 1.25;
+  return 1.0; // competitive
+}
+
+// Streak bonus (capped at 25% after 10 streak)
+function getStreakBonus(streak) {
+  if (!streak || streak < 2) return 1.0;
+  const s = Math.min(streak, 10);
+  return 1.0 + (s / 10) * 0.25;
+}
+
+// Singles ELO calculation
+function calcSinglesElo(winnerElo, loserElo, winnerScore, loserScore, maxScore, type, winnerPhase, loserPhase, winnerStreak) {
+  const exp = expectedScore(winnerElo, loserElo);
+  const kW = getKFactor(winnerPhase, winnerElo);
+  const kL = getKFactor(loserPhase, loserElo);
+  const scoreFactor = getScoreFactor(winnerScore, loserScore, maxScore);
+  const typeMult = getTypeMultiplier(type);
+  const streakBonus = getStreakBonus(winnerStreak);
+
+  const rawGain = kW * (1 - exp) * scoreFactor * typeMult * streakBonus;
+  const rawLoss = kL * exp * scoreFactor * typeMult;
+
+  // Clamp to not lose elo on win or gain on loss
+  const winnerDelta = Math.max(0, rawGain);
+  const loserDelta = -Math.max(0, rawLoss);
+
+  return { winnerDelta, loserDelta };
+}
+
+// Doubles ELO calculation
+function calcDoublesElo(team1Elos, team2Elos, winnerTeam, winnerScore, loserScore, maxScore, type, phases, winnerStreak) {
+  // Team average elo
+  const t1Avg = (team1Elos[0] + team1Elos[1]) / 2;
+  const t2Avg = (team2Elos[0] + team2Elos[1]) / 2;
+  const winnerAvg = winnerTeam === 0 ? t1Avg : t2Avg;
+  const loserAvg = winnerTeam === 0 ? t2Avg : t1Avg;
+
+  const exp = expectedScore(winnerAvg, loserAvg);
+  const scoreFactor = getScoreFactor(winnerScore, loserScore, maxScore);
+  const typeMult = getTypeMultiplier(type);
+  const streakBonus = getStreakBonus(winnerStreak);
+
+  const deltas = {};
+  const winnerElos = winnerTeam === 0 ? team1Elos : team2Elos;
+  const loserElos = winnerTeam === 0 ? team2Elos : team1Elos;
+  const winnerPhases = winnerTeam === 0 ? [phases[0], phases[1]] : [phases[2], phases[3]];
+  const loserPhases = winnerTeam === 0 ? [phases[2], phases[3]] : [phases[0], phases[1]];
+
+  // For each player, adjust based on how their individual elo compares to team avg
+  // Weaker player on winning team gets a bit more, stronger gets less
+  winnerElos.forEach((elo, i) => {
+    const k = getKFactor(winnerPhases[i], elo);
+    const relStrength = (elo - winnerAvg) / 5; // normalized relative strength
+    const indivFactor = 1.0 - relStrength * 0.2; // stronger player gets slightly less
+    deltas[`w${i}`] = Math.max(0, k * (1 - exp) * scoreFactor * typeMult * streakBonus * indivFactor);
+  });
+
+  loserElos.forEach((elo, i) => {
+    const k = getKFactor(loserPhases[i], elo);
+    const relStrength = (elo - loserAvg) / 5;
+    const indivFactor = 1.0 + relStrength * 0.1; // stronger player on losing team loses a bit more
+    deltas[`l${i}`] = -Math.max(0, k * exp * scoreFactor * typeMult * indivFactor);
+  });
+
+  return deltas;
+}
+
+// Clamp elo to valid range
+function clampElo(elo) { return Math.max(ELO_MIN, Math.min(ELO_MAX, elo)); }
+
+// ===================== PLAYER ELO FETCH =====================
+async function getPlayerElo(userId) {
+  try {
+    const stored = await dbGet(`players/${userId}/elo`);
+    if (stored !== null && stored !== undefined) return stored;
+    return ELO_BASE;
+  } catch { return ELO_BASE; }
+}
+
+async function getPlayerData(userId) {
+  try { return await dbGet(`players/${userId}`); } catch { return null; }
+}
+
+// Recalculate elo from ledger (for integrity check)
+async function recalcEloFromLedger(userId) {
+  try {
+    const txs = await dbGet(`eloLedger/${userId}`);
+    if (!txs) return ELO_BASE;
+    const arr = Object.values(txs).filter(t => t.valid !== false);
+    return arr.reduce((s, t) => s + (t.delta || 0), ELO_BASE);
+  } catch { return ELO_BASE; }
+}
+
+// Apply elo transaction (never overwrite, always append)
+async function applyEloTransaction(userId, matchId, delta, reason = '') {
+  const before = await getPlayerElo(userId);
+  const after = clampElo(before + delta);
+  const actualDelta = after - before;
+  const tx = { player: userId, matchId, delta: actualDelta, before, after, timestamp: Date.now(), valid: true, reason };
+  await dbPush(`eloLedger/${userId}`, tx);
+  await dbUpdate(`players/${userId}`, { elo: after });
+  return { before, after, delta: actualDelta };
+}
+
+// ===================== MATCH INTEGRITY HASH =====================
+async function buildMatchHash(matchData, previousHash) {
+  const payload = { matchId: matchData.id || matchData.matchId, timestamp: matchData.timestamp, players: matchData.players, score: matchData.score, eloDeltas: matchData.eloDeltas, previousHash };
+  return await hashMatch(payload);
+}
+
+// ===================== PENDING ELO (offline) =====================
+async function checkPendingEloUpdates() {
+  if (!currentUser) return;
+  try {
+    const pending = await dbGet(`players/${currentUser.id}/pendingEloDeltas`);
+    if (!pending) return;
+    const items = Object.entries(pending).filter(([_, v]) => v.shown !== true);
+    for (const [key, item] of items) {
+      showEloPopup(item.delta);
+      await dbUpdate(`players/${currentUser.id}/pendingEloDeltas/${key}`, { shown: true });
+    }
+  } catch { }
+}
+
+// ===================== INIT =====================
+async function init() {
+  loadSession();
+  setTimeout(() => {
+    const ov = document.getElementById('intro-overlay');
+    if (ov) { ov.style.transition = 'opacity .6s ease'; ov.style.opacity = '0'; setTimeout(() => { if (ov) ov.style.display = 'none'; }, 640); }
+  }, 2200);
+
+  if (currentUser) {
+    try {
+      const u = await dbGet(`users/${currentUser.id}`);
+      if (!u) { clearSession(); renderAuth(); return; }
+      const p = await dbGet(`players/${currentUser.id}`);
+      currentUser = { ...currentUser, ...u, id: currentUser.id, playerData: p || {} };
+      saveSession(currentUser);
+      if (currentUser.role === 'banned') {
+        clearSession();
+        document.body.innerHTML = `<div style="display:flex;height:100vh;background:#000;color:red;align-items:center;justify-content:center;flex-direction:column;gap:16px"><h1 style="font-size:3rem">🚫</h1><h1 style="font-family:var(--display)">BANNED</h1><p style="color:#ff6666;text-align:center;max-width:400px">${esc(currentUser.banReason || 'You have been banned.')}</p></div>`;
+        return;
+      }
+    } catch (e) { }
+
+    document.getElementById('main-header').style.display = '';
+    document.getElementById('mobile-nav').style.display = '';
+    const adminBtn = document.getElementById('admin-nav-btn');
+    if (adminBtn) adminBtn.style.display = (currentUser.isAdmin || currentUser.isTracker) ? '' : 'none';
+    updateHeaderElo();
+    navigate('matches');
+    setTimeout(checkPendingEloUpdates, 1500);
+    setTimeout(runIntegrityCheck, 3000);
+  } else {
+    document.getElementById('main-header').style.display = 'none';
+    document.getElementById('mobile-nav').style.display = 'none';
+    renderAuth();
+  }
+}
+
+function updateHeaderElo() {
+  const elo = currentUser?.playerData?.elo;
+  document.getElementById('header-elo').textContent = elo !== undefined && elo !== null ? fmtElo(elo) : '—';
+}
+
+// ===================== ROUTER =====================
+function renderPage() {
+  const c = document.getElementById('page-content');
+  c.innerHTML = `<div class="loading-page"><div class="spinner"></div><span>Loading…</span></div>`;
+  switch (currentPage) {
+    case 'matches': renderMatches(); break;
+    case 'match-detail': renderMatchDetail(currentMatchId); break;
+    case 'leaderboard': renderLeaderboard(); break;
+    case 'profile': renderProfile(currentProfileId); break;
+    case 'admin': renderAdmin(); break;
+    case 'rules': renderRules(); break;
+    default: renderMatches();
+  }
+}
+
+// ===================== AUTH =====================
+function renderAuth(mode = 'login') {
+  const c = document.getElementById('page-content');
+  if (mode === 'login') {
+    c.innerHTML = `
+      <div class="auth-container page">
+        <div class="auth-logo"><div class="big">HSR</div><div class="sub">Hackley Spikeball Rated</div></div>
+        <div class="auth-card">
+          <div class="auth-title">Welcome Back</div>
+          <p class="auth-sub">Sign in to your account</p>
+          <form id="login-form">
+            <div class="form-group"><label>Email</label><input type="email" id="login-email" placeholder="you@students.hackleyschool.org" required autocomplete="email"></div>
+            <div class="form-group"><label>Password</label><input type="password" id="login-pw" placeholder="Password" required></div>
+            <button type="submit" class="btn btn-primary" style="width:100%;padding:12px;margin-top:6px">Sign In</button>
+          </form>
+          <p class="auth-switch">No account? <a href="#" id="go-signup">Sign up →</a></p>
+        </div>
+      </div>`;
+    document.getElementById('login-form').onsubmit = doLogin;
+    document.getElementById('go-signup').onclick = e => { e.preventDefault(); renderAuth('signup'); };
+  } else {
+    c.innerHTML = `
+      <div class="auth-container page">
+        <div class="auth-logo"><div class="big">HSR</div><div class="sub">Join the ranked ladder</div></div>
+        <div class="auth-card">
+          <div class="auth-title">Create Account</div>
+          <p class="auth-sub">Use your Hackley email to register</p>
+          <form id="signup-form">
+            <div class="form-group"><label>Display Name</label><input type="text" id="su-name" placeholder="Your name" required></div>
+            <div class="form-group"><label>Hackley Email</label><input type="email" id="su-email" placeholder="you@students.hackleyschool.org" required><p class="hint">Must end in @students.hackleyschool.org or @hackleyschool.org</p></div>
+            <div class="form-group"><label>Password</label><input type="password" id="su-pw" placeholder="At least 6 characters" required minlength="6"></div>
+            <button type="submit" class="btn btn-primary" style="width:100%;padding:12px;margin-top:6px">Create Account</button>
+          </form>
+          <p class="auth-switch">Have an account? <a href="#" id="go-login">Sign in →</a></p>
+        </div>
+      </div>`;
+    document.getElementById('signup-form').onsubmit = doSignup;
+    document.getElementById('go-login').onclick = e => { e.preventDefault(); renderAuth('login'); };
+  }
+}
+
+async function doLogin(e) {
+  e.preventDefault();
+  const btn = e.target.querySelector('button[type=submit]');
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const pw = document.getElementById('login-pw').value;
+  try {
+    const users = await dbGet('users');
+    if (!users) { showToast('No account found', 'error'); return; }
+    const hash = await hashPw(pw);
+    const entry = Object.entries(users).find(([_, u]) => u.email === email && u.passwordHash === hash);
+    if (!entry) { showToast('Invalid email or password', 'error'); return; }
+    const [id, user] = entry;
+    if (user.role === 'banned') { showToast('This account has been banned', 'error'); return; }
+    saveSession({ id, ...user });
+    showToast('Welcome back, ' + user.name + '!', 'success');
+    init();
+  } catch (err) { showToast('Login failed: ' + err.message, 'error'); }
+  finally { btn.disabled = false; btn.textContent = 'Sign In'; }
+}
+
+async function doSignup(e) {
+  e.preventDefault();
+  const btn = e.target.querySelector('button[type=submit]');
+  btn.disabled = true; btn.textContent = 'Creating…';
+  const name = document.getElementById('su-name').value.trim();
+  const email = document.getElementById('su-email').value.trim().toLowerCase();
+  const pw = document.getElementById('su-pw').value;
+  if (!email.endsWith('@students.hackleyschool.org') && !email.endsWith('@hackleyschool.org')) {
+    showToast('Must use a Hackley email', 'error'); btn.disabled = false; btn.textContent = 'Create Account'; return;
+  }
+  try {
+    const users = await dbGet('users');
+    if (users) { const ex = Object.values(users).find(u => u.email === email); if (ex) { showToast('Account already exists', 'error'); btn.disabled = false; btn.textContent = 'Create Account'; return; } }
+    const hash = await hashPw(pw);
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const userData = { name, email, passwordHash: hash, role: 'user', verified: false, verifyCode: code, createdAt: Date.now() };
+    const res = await dbPush('users', userData);
+    const id = res.name;
+    // Init player record
+    await dbSet(`players/${id}`, { elo: ELO_BASE, gamesPlayed: 0, wins: 0, losses: 0, compStreak: 0, casualStreak: 0, compStreakBest: 0, casualStreakBest: 0, singlesElo: ELO_BASE, doublesElo: ELO_BASE, phase: 'placement', uncertainty: 1.0 });
+    await emailjs.send("service_lytp94p", "template_gyr9kcp", { to_email: email, username: name, otp_code: code });
+    saveSession({ id, ...userData, playerData: { elo: ELO_BASE, gamesPlayed: 0, wins: 0, losses: 0 } });
+    showToast('Account created! Check your email.', 'success');
+    showVerifyModal();
+  } catch (err) { showToast('Signup failed: ' + err.message, 'error'); }
+  finally { btn.disabled = false; btn.textContent = 'Create Account'; }
+}
+
+function showVerifyModal() {
+  openModal('Verify Your Email', `
+    <div style="text-align:center">
+      <div style="font-size:3rem;margin-bottom:14px">📧</div>
+      <p style="color:var(--text-secondary);margin-bottom:18px;font-size:.88rem">A 6-digit code was sent to your Hackley email.</p>
+      <div class="form-group"><input type="text" id="verify-input" placeholder="000000" maxlength="6" style="text-align:center;font-size:1.8rem;letter-spacing:.4em;font-family:var(--mono)"></div>
+    </div>
+  `, `<button class="btn btn-primary" id="verify-submit" style="width:100%">Verify Account</button>`);
+  document.getElementById('verify-submit').onclick = async () => {
+    const input = document.getElementById('verify-input').value.trim();
+    if (input.length !== 6) { showToast('Enter 6-digit code', 'error'); return; }
+    try {
+      const ud = await dbGet(`users/${currentUser.id}`);
+      if (ud && ud.verifyCode === input) {
+        await dbUpdate(`users/${currentUser.id}`, { verified: true, verifyCode: null });
+        currentUser.verified = true; saveSession(currentUser); closeModal();
+        showToast('Email verified! Welcome to HSR!', 'success'); init();
+      } else { showToast('Invalid code', 'error'); }
+    } catch { showToast('Verification failed', 'error'); }
+  };
+}
+
+// ===================== MATCHES PAGE =====================
+async function renderMatches() {
+  const c = document.getElementById('page-content');
+  try {
+    const [matchesData, usersData] = await Promise.all([dbGet('matches'), dbGet('users')]);
+    const users = usersData || {};
+    let matches = matchesData ? Object.entries(matchesData).map(([id, m]) => ({ id, ...m })) : [];
+    matches = matches.filter(m => !m.hidden && m.status === 'completed').sort((a, b) => b.timestamp - a.timestamp);
+
+    const isTracker = currentUser?.isAdmin || currentUser?.isTracker;
+
+    let filterType = 'all';
+    let filterMode = 'all';
+
+    function render(type, mode) {
+      filterType = type; filterMode = mode;
+      let filtered = [...matches];
+      if (type !== 'all') filtered = filtered.filter(m => m.matchType === type);
+      if (mode !== 'all') filtered = filtered.filter(m => m.mode === mode);
+
+      c.innerHTML = `
+        <div class="page">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+            <h1 class="page-title">⚡ <span class="accent">Matches</span></h1>
+            ${isTracker ? `<button class="btn btn-primary" id="new-match-btn">+ New Match</button>` : ''}
+          </div>
+          <div class="filter-bar">
+            <button class="filter-pill ${type === 'all' ? 'active' : ''}" data-ftype="all">All</button>
+            <button class="filter-pill ${type === 'singles' ? 'active' : ''}" data-ftype="singles">Singles</button>
+            <button class="filter-pill ${type === 'doubles' ? 'active' : ''}" data-ftype="doubles">Doubles</button>
+            <div style="width:1px;height:20px;background:var(--border);margin:0 4px"></div>
+            <button class="filter-pill ${mode === 'all' ? 'active' : ''}" data-fmode="all">All Modes</button>
+            <button class="filter-pill ${mode === 'competitive' ? 'active' : ''}" data-fmode="competitive">Competitive</button>
+            <button class="filter-pill ${mode === 'casual' ? 'active' : ''}" data-fmode="casual">Casual</button>
+            <button class="filter-pill ${mode === 'tournament' ? 'active' : ''}" data-fmode="tournament">Tournament</button>
+          </div>
+          ${filtered.length === 0 ? `<div class="empty-state"><span class="emoji">🏐</span><h3>No Matches Yet</h3><p>Matches will appear here once tracked.</p></div>` : `
+            <div class="match-grid">
+              ${filtered.map(m => renderMatchCard(m, users)).join('')}
+            </div>
+          `}
+        </div>`;
+
+      c.querySelectorAll('[data-ftype]').forEach(b => b.onclick = () => render(b.dataset.ftype, filterMode));
+      c.querySelectorAll('[data-fmode]').forEach(b => b.onclick = () => render(filterType, b.dataset.fmode));
+      c.querySelectorAll('.match-card').forEach(card => card.onclick = () => navigate('match-detail', card.dataset.matchId));
+      document.getElementById('new-match-btn')?.addEventListener('click', showNewMatchModal);
+    }
+    render(filterType, filterMode);
+  } catch (err) {
+    document.getElementById('page-content').innerHTML = `<div class="empty-state"><h3>Error</h3><p>${esc(err.message)}</p></div>`;
+  }
+}
+
+function renderMatchCard(m, users) {
+  const isDoubles = m.matchType === 'doubles';
+  const modeClass = m.mode === 'tournament' ? 'type-badge-tournament' : m.mode === 'competitive' ? 'type-badge-competitive' : 'type-badge-casual';
+  const modeLabel = m.mode === 'tournament' ? '🏆 Tournament' : m.mode === 'competitive' ? '⚡ Competitive' : '🎮 Casual';
+
+  let playersHtml = '';
+  if (isDoubles) {
+    const t1 = (m.team1 || []).map(id => users[id]?.name || 'Unknown').join(' & ');
+    const t2 = (m.team2 || []).map(id => users[id]?.name || 'Unknown').join(' & ');
+    playersHtml = `
+      <div class="match-players">
+        <div class="match-player"><div class="match-player-name" style="font-size:.78rem">${esc(t1)}</div></div>
+        <div class="match-score-center"><div class="match-score-num">${m.score1 || 0}<span class="match-score-sep">—</span>${m.score2 || 0}</div></div>
+        <div class="match-player"><div class="match-player-name" style="font-size:.78rem">${esc(t2)}</div></div>
+      </div>`;
+  } else {
+    const p1 = users[m.player1]?.name || 'Unknown';
+    const p2 = users[m.player2]?.name || 'Unknown';
+    const p1elo = m.p1EloAfter !== undefined ? fmtElo(m.p1EloAfter) : '—';
+    const p2elo = m.p2EloAfter !== undefined ? fmtElo(m.p2EloAfter) : '—';
+    playersHtml = `
+      <div class="match-players">
+        <div class="match-player">
+          <div class="match-player-name">${esc(p1)}</div>
+          <div class="match-player-elo">${p1elo}</div>
+        </div>
+        <div class="match-score-center"><div class="match-score-num">${m.score1 || 0}<span class="match-score-sep">—</span>${m.score2 || 0}</div></div>
+        <div class="match-player">
+          <div class="match-player-name">${esc(p2)}</div>
+          <div class="match-player-elo">${p2elo}</div>
+        </div>
+      </div>`;
+  }
+
+  const avgElo = m.avgElo ? fmtElo(m.avgElo) : '—';
+  const winnerName = isDoubles
+    ? (m.winner === 1 ? (m.team1 || []).map(id => users[id]?.name || 'U').join(' & ') : (m.team2 || []).map(id => users[id]?.name || 'U').join(' & '))
+    : (m.winner === 1 ? (users[m.player1]?.name || 'P1') : (users[m.player2]?.name || 'P2'));
+
+  return `
+    <div class="match-card" data-match-id="${m.id}">
+      <div class="match-card-top">
+        <div class="match-card-type">
+          <span class="${modeClass}">${modeLabel}</span>
+          <span class="badge ${isDoubles ? 'badge-blue' : 'badge-muted'}">${isDoubles ? 'Doubles' : 'Singles'}</span>
+          <span style="margin-left:auto;font-size:.6rem;color:var(--text-muted)">${timeAgo(m.timestamp)}</span>
+        </div>
+        ${playersHtml}
+      </div>
+      <div class="match-card-bottom">
+        <span style="color:var(--text-secondary);font-weight:700;font-size:.72rem">Winner: <strong style="color:var(--text)">${esc(winnerName)}</strong></span>
+        <span style="font-size:.65rem">Avg ELO: <strong style="color:var(--yellow)">${avgElo}</strong></span>
+        ${m.disputed ? `<span class="badge badge-red">⚑ Disputed</span>` : ''}
+        <span class="badge badge-muted">to ${m.winTo}</span>
+      </div>
+    </div>`;
+}
+
+// ===================== MATCH DETAIL =====================
+async function renderMatchDetail(matchId) {
+  const c = document.getElementById('page-content');
+  try {
+    const [match, usersData] = await Promise.all([dbGet(`matches/${matchId}`), dbGet('users')]);
+    if (!match) { c.innerHTML = '<div class="empty-state"><h3>Match not found</h3></div>'; return; }
+    const users = usersData || {};
+    const isDoubles = match.matchType === 'doubles';
+
+    const modeLabel = match.mode === 'tournament' ? '🏆 Tournament' : match.mode === 'competitive' ? '⚡ Competitive' : '🎮 Casual';
+    const modeColor = match.mode === 'tournament' ? 'var(--orange)' : match.mode === 'competitive' ? 'var(--yellow)' : 'var(--text-muted)';
+
+    let playerSection = '';
+    let eloSection = '';
+
+    if (!isDoubles) {
+      const p1 = users[match.player1] || {}; const p2 = users[match.player2] || {};
+      const d1 = match.p1EloAfter - match.p1EloBefore; const d2 = match.p2EloAfter - match.p2EloBefore;
+      playerSection = `
+        <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center;margin-bottom:20px">
+          <div style="text-align:center">
+            ${p1.pfp ? `<img src="${esc(p1.pfp)}" class="lb-avatar-init" style="width:64px;height:64px;border-radius:50%;object-fit:cover;margin:0 auto 8px">` : `<div class="lb-avatar-init" style="width:64px;height:64px;margin:0 auto 8px;font-size:1.4rem;background:${avatarColor(p1.name)}22;color:${avatarColor(p1.name)}">${initials(p1.name)}</div>`}
+            <div class="match-player-name" style="font-size:1rem;cursor:pointer;color:${match.winner===1?'var(--yellow)':'var(--text)'}" onclick="navigate('profile','${match.player1}')">${esc(p1.name || 'Player 1')}${match.winner===1?` 👑`:''}</div>
+            <div style="font-family:var(--display);font-size:1.4rem;color:var(--yellow)">${fmtElo(match.p1EloAfter || ELO_BASE)}</div>
+            <div class="${d1 >= 0 ? 'elo-delta-pos' : 'elo-delta-neg'}" style="font-size:.8rem">${d1 >= 0 ? '+' : ''}${(d1 || 0).toFixed(2)} ELO</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-family:var(--display);font-size:3.5rem;letter-spacing:.04em;color:var(--text);line-height:1">${match.score1}<span style="color:var(--text-muted);font-size:2rem;margin:0 8px">—</span>${match.score2}</div>
+            <div style="font-size:.7rem;color:var(--text-muted);margin-top:4px">to ${match.winTo}</div>
+          </div>
+          <div style="text-align:center">
+            ${p2.pfp ? `<img src="${esc(p2.pfp)}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;margin:0 auto 8px">` : `<div class="lb-avatar-init" style="width:64px;height:64px;margin:0 auto 8px;font-size:1.4rem;background:${avatarColor(p2.name)}22;color:${avatarColor(p2.name)}">${initials(p2.name)}</div>`}
+            <div class="match-player-name" style="font-size:1rem;cursor:pointer;color:${match.winner===2?'var(--yellow)':'var(--text)'}" onclick="navigate('profile','${match.player2}')">${esc(p2.name || 'Player 2')}${match.winner===2?` 👑`:''}</div>
+            <div style="font-family:var(--display);font-size:1.4rem;color:var(--yellow)">${fmtElo(match.p2EloAfter || ELO_BASE)}</div>
+            <div class="${d2 >= 0 ? 'elo-delta-pos' : 'elo-delta-neg'}" style="font-size:.8rem">${d2 >= 0 ? '+' : ''}${(d2 || 0).toFixed(2)} ELO</div>
+          </div>
+        </div>`;
+    } else {
+      const t1Names = (match.team1 || []).map(id => users[id]?.name || 'Unknown').join(' & ');
+      const t2Names = (match.team2 || []).map(id => users[id]?.name || 'Unknown').join(' & ');
+      playerSection = `
+        <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:16px;align-items:center;margin-bottom:20px">
+          <div style="text-align:center">
+            <div class="match-player-name" style="font-size:.9rem;color:${match.winner===1?'var(--yellow)':'var(--text)'}">${esc(t1Names)}${match.winner===1?' 👑':''}</div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-family:var(--display);font-size:3.5rem;letter-spacing:.04em;color:var(--text);line-height:1">${match.score1}<span style="color:var(--text-muted);font-size:2rem;margin:0 8px">—</span>${match.score2}</div>
+            <div style="font-size:.7rem;color:var(--text-muted);margin-top:4px">to ${match.winTo}</div>
+          </div>
+          <div style="text-align:center">
+            <div class="match-player-name" style="font-size:.9rem;color:${match.winner===2?'var(--yellow)':'var(--text)'}">${esc(t2Names)}${match.winner===2?' 👑':''}</div>
+          </div>
+        </div>`;
+    }
+
+    // Play by play
+    const plays = match.playByPlay || [];
+    const pbpHtml = plays.length > 0 ? plays.map(p => `
+      <div class="play-by-play-item ${p.team === 1 ? 'team1' : 'team2'}">
+        <span>${esc(p.action)}</span>
+        <span class="play-score">${p.score1}—${p.score2}</span>
+      </div>`).join('') : '<p style="color:var(--text-muted);font-size:.8rem;padding:12px">No play-by-play data</p>';
+
+    const canDispute = currentUser && !match.disputed && match.status === 'completed' && (
+      match.player1 === currentUser.id || match.player2 === currentUser.id ||
+      (match.team1 || []).includes(currentUser.id) || (match.team2 || []).includes(currentUser.id)
+    );
+
+    c.innerHTML = `
+      <div class="page">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+          <button class="btn btn-ghost" onclick="navigate('matches')">← Back</button>
+          <span style="color:${modeColor};font-weight:800;font-size:.8rem;text-transform:uppercase;letter-spacing:.1em">${modeLabel}</span>
+          ${match.disputed ? `<span class="badge badge-red">⚑ Disputed</span>` : ''}
+          ${match.version > 1 ? `<span class="badge badge-blue">v${match.version} Modified</span>` : ''}
+        </div>
+        <div class="match-detail-grid">
+          <div>
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-body">${playerSection}</div>
+            </div>
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-header"><span class="card-header-title">Match Info</span></div>
+              <div class="card-body">
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+                  <div class="stat-card"><div class="stat-label">Match Level</div><div class="stat-value yellow" style="font-size:1.3rem">${fmtElo(match.avgElo || 0)}</div></div>
+                  <div class="stat-card"><div class="stat-label">Mode</div><div class="stat-value" style="font-size:1rem;color:${modeColor}">${match.mode?.toUpperCase()}</div></div>
+                  <div class="stat-card"><div class="stat-label">Win To</div><div class="stat-value" style="font-size:1.4rem">${match.winTo}</div></div>
+                </div>
+                <div style="font-size:.73rem;color:var(--text-muted)">
+                  Tracked by <strong style="color:var(--text)">${esc(match.trackerName || 'Unknown')}</strong> · ${new Date(match.timestamp).toLocaleString()}
+                  ${match.hash ? `<br><span style="font-family:var(--mono)">Hash: ${esc(match.hash)}</span>` : ''}
+                </div>
+              </div>
+            </div>
+            ${plays.length > 0 ? `
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-header"><span class="card-header-title">Play by Play</span></div>
+              <div class="card-body" style="max-height:300px;overflow-y:auto">${pbpHtml}</div>
+            </div>` : ''}
+            ${canDispute ? `
+            <div style="margin-bottom:16px">
+              <button class="btn btn-danger" onclick="showDisputeModal('${matchId}')">⚑ Dispute This Match</button>
+            </div>` : ''}
+          </div>
+          <div>
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-header"><span class="card-header-title">ELO Changes</span></div>
+              <div class="card-body">
+                ${renderEloDeltaPanel(match, users)}
+              </div>
+            </div>
+            ${match.hash ? `
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-header"><span class="card-header-title">Integrity</span></div>
+              <div class="card-body">
+                <div style="font-size:.72rem;color:var(--text-muted)">
+                  <div style="margin-bottom:6px">Match ID: <span style="font-family:var(--mono);color:var(--text)">${matchId.slice(0,12)}…</span></div>
+                  <div style="margin-bottom:6px">Hash: <span style="font-family:var(--mono);color:var(--yellow)">${esc(match.hash)}</span></div>
+                  ${match.previousHash ? `<div>Prev: <span style="font-family:var(--mono)">${esc(match.previousHash)}</span></div>` : ''}
+                </div>
+              </div>
+            </div>` : ''}
+          </div>
+        </div>
+      </div>`;
+  } catch (err) {
+    c.innerHTML = `<div class="empty-state"><h3>Error loading match</h3><p>${esc(err.message)}</p></div>`;
+  }
+}
+
+function renderEloDeltaPanel(match, users) {
+  if (match.matchType === 'singles') {
+    const p1 = users[match.player1]; const p2 = users[match.player2];
+    const d1 = (match.p1EloAfter || 0) - (match.p1EloBefore || 0);
+    const d2 = (match.p2EloAfter || 0) - (match.p2EloBefore || 0);
+    return `
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg-surface);border-radius:8px;border:1px solid var(--border)">
+          <span style="font-weight:700">${esc(p1?.name || 'P1')}</span>
+          <div style="text-align:right">
+            <div style="font-family:var(--mono);font-size:.75rem;color:var(--text-muted)">${fmtElo(match.p1EloBefore)} → ${fmtElo(match.p1EloAfter)}</div>
+            <div class="${d1 >= 0 ? 'elo-delta-pos' : 'elo-delta-neg'}">${d1 >= 0 ? '+' : ''}${d1.toFixed(2)}</div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg-surface);border-radius:8px;border:1px solid var(--border)">
+          <span style="font-weight:700">${esc(p2?.name || 'P2')}</span>
+          <div style="text-align:right">
+            <div style="font-family:var(--mono);font-size:.75rem;color:var(--text-muted)">${fmtElo(match.p2EloBefore)} → ${fmtElo(match.p2EloAfter)}</div>
+            <div class="${d2 >= 0 ? 'elo-delta-pos' : 'elo-delta-neg'}">${d2 >= 0 ? '+' : ''}${d2.toFixed(2)}</div>
+          </div>
+        </div>
+      </div>`;
+  } else {
+    const all = [...(match.team1 || []), ...(match.team2 || [])];
+    return all.map((id, i) => {
+      const u = users[id]; const delta = match.eloDeltas?.[id] || 0; const before = match.elosBefore?.[id] || ELO_BASE;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg-surface);border-radius:8px;border:1px solid var(--border);margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="badge ${i < 2 ? 'badge-yellow' : 'badge-blue'}">${i < 2 ? 'T1' : 'T2'}</span>
+          <span style="font-weight:700">${esc(u?.name || 'Player')}</span>
+        </div>
+        <div class="${delta >= 0 ? 'elo-delta-pos' : 'elo-delta-neg'}">${delta >= 0 ? '+' : ''}${delta.toFixed(2)}</div>
+      </div>`;
+    }).join('');
+  }
+}
+
+// ===================== DISPUTE MODAL =====================
+function showDisputeModal(matchId) {
+  const reasons = ['Wrong score', 'Wrong players', 'Fake result', 'Incomplete match', 'Rule violation', 'Tracker abuse'];
+  let selectedReason = '';
+  openModal('Dispute Match', `
+    <p style="font-size:.84rem;color:var(--text-secondary);margin-bottom:14px">Select a reason for the dispute and provide your reasoning below.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px">
+      ${reasons.map(r => `<button class="dispute-reason-btn" data-r="${esc(r)}">${esc(r)}</button>`).join('')}
+    </div>
+    <div class="form-group"><label>Reasoning</label><textarea id="dispute-reasoning" placeholder="Explain what happened…" rows="3"></textarea></div>
+  `, `
+    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-danger" id="dispute-submit">Submit Dispute</button>
+  `);
+  document.querySelectorAll('.dispute-reason-btn').forEach(b => b.onclick = () => {
+    document.querySelectorAll('.dispute-reason-btn').forEach(x => x.classList.remove('selected'));
+    b.classList.add('selected'); selectedReason = b.dataset.r;
+  });
+  document.getElementById('dispute-submit').onclick = async () => {
+    if (!selectedReason) { showToast('Select a reason', 'error'); return; }
+    const reasoning = document.getElementById('dispute-reasoning').value.trim();
+    if (!reasoning) { showToast('Provide reasoning', 'error'); return; }
+    try {
+      await dbPush('disputes', { matchId, reason: selectedReason, reasoning, submittedBy: currentUser.id, submittedByName: currentUser.name, timestamp: Date.now(), status: 'pending' });
+      await dbUpdate(`matches/${matchId}`, { disputed: true });
+      closeModal(); showToast('Dispute submitted to admins', 'success');
+    } catch { showToast('Failed to submit dispute', 'error'); }
+  };
+}
+
+// ===================== NEW MATCH WIZARD =====================
+async function showNewMatchModal() {
+  if (!currentUser?.verified) { showToast('Verify your email first', 'error'); return; }
+  const [usersData] = await Promise.all([dbGet('users')]);
+  const users = usersData ? Object.entries(usersData).map(([id, u]) => ({ id, ...u })).filter(u => u.verified && u.role !== 'banned') : [];
+
+  let step = 1;
+  let matchConfig = { matchType: 'singles', mode: 'competitive', winTo: 21, player1: null, player2: null, team1: [], team2: [] };
+  let matchState = null; // active match state
+
+  function getPlayerEloSync(uid) {
+    // We'll load these asynchronously but show defaults
+    return ELO_BASE;
+  }
+
+  function renderStep1() {
+    return `
+      <div class="match-wizard-step active" id="step-1">
+        <div class="form-group">
+          <label>Match Type</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
+            <button class="score-option ${matchConfig.matchType==='singles'?'selected':''}" style="width:100%;height:52px;font-family:var(--font);font-size:.85rem;font-weight:800" onclick="setMatchProp('matchType','singles')">Singles</button>
+            <button class="score-option ${matchConfig.matchType==='doubles'?'selected':''}" style="width:100%;height:52px;font-family:var(--font);font-size:.85rem;font-weight:800" onclick="setMatchProp('matchType','doubles')">Doubles</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Mode</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px">
+            <button class="score-option ${matchConfig.mode==='casual'?'selected':''}" style="width:100%;height:52px;font-family:var(--font);font-size:.8rem;font-weight:800" onclick="setMatchProp('mode','casual')">Casual<br><span style="font-size:.62rem;opacity:.6">50% ELO</span></button>
+            <button class="score-option ${matchConfig.mode==='competitive'?'selected':''}" style="width:100%;height:52px;font-family:var(--font);font-size:.8rem;font-weight:800" onclick="setMatchProp('mode','competitive')">Competitive<br><span style="font-size:.62rem;opacity:.6">100% ELO</span></button>
+            <button class="score-option ${matchConfig.mode==='tournament'?'selected':''}" style="width:100%;height:52px;font-family:var(--font);font-size:.8rem;font-weight:800" onclick="setMatchProp('mode','tournament')">Tournament<br><span style="font-size:.62rem;opacity:.6">125% ELO</span></button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Play to (Win Score)</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+            ${[3,7,11,15,17,21].map(s => `<button class="score-option ${matchConfig.winTo===s?'selected':''}" onclick="setMatchProp('winTo',${s})">${s}</button>`).join('')}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function renderStep2(loadedPlayers) {
+    const isDoubles = matchConfig.matchType === 'doubles';
+    if (isDoubles) {
+      return `
+        <div class="match-wizard-step active" id="step-2">
+          <p style="font-size:.82rem;color:var(--text-secondary);margin-bottom:14px">Select 2 players per team.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div>
+              <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--yellow);margin-bottom:8px">Team 1</div>
+              ${users.filter(u => u.id !== currentUser?.id || true).map(u => {
+        const inT2 = matchConfig.team2.includes(u.id);
+        const inT1 = matchConfig.team1.includes(u.id);
+        const disabled = inT2 || (inT1 && matchConfig.team1.length >= 2 && !inT1);
+        return `<div class="player-select-card ${inT1 ? 'selected' : ''}" data-uid="${u.id}" onclick="toggleTeamPlayer(1,'${u.id}',${loadedPlayers[u.id] || ELO_BASE})">
+                  ${u.pfp ? `<img src="${esc(u.pfp)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover">` : `<div style="width:28px;height:28px;border-radius:50%;background:${avatarColor(u.name)}22;color:${avatarColor(u.name)};display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:800">${initials(u.name)}</div>`}
+                  <span style="font-weight:700;font-size:.82rem">${esc(u.name)}</span>
+                  <span class="player-elo-badge">${fmtElo(loadedPlayers[u.id] || ELO_BASE)}</span>
+                </div>`;
+      }).join('')}
+            </div>
+            <div>
+              <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);margin-bottom:8px">Team 2</div>
+              ${users.map(u => {
+        const inT1 = matchConfig.team1.includes(u.id);
+        const inT2 = matchConfig.team2.includes(u.id);
+        return `<div class="player-select-card ${inT2 ? 'selected' : ''}" style="${inT2 ? 'border-color:rgba(74,158,255,0.4);background:var(--blue-dim)' : ''}" data-uid2="${u.id}" onclick="toggleTeamPlayer(2,'${u.id}',${loadedPlayers[u.id] || ELO_BASE})">
+                  ${u.pfp ? `<img src="${esc(u.pfp)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover">` : `<div style="width:28px;height:28px;border-radius:50%;background:${avatarColor(u.name)}22;color:${avatarColor(u.name)};display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:800">${initials(u.name)}</div>`}
+                  <span style="font-weight:700;font-size:.82rem">${esc(u.name)}</span>
+                  <span class="player-elo-badge">${fmtElo(loadedPlayers[u.id] || ELO_BASE)}</span>
+                </div>`;
+      }).join('')}
+            </div>
+          </div>
+        </div>`;
+    } else {
+      return `
+        <div class="match-wizard-step active" id="step-2">
+          <p style="font-size:.82rem;color:var(--text-secondary);margin-bottom:14px">Select the two players.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div>
+              <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--yellow);margin-bottom:8px">Player 1</div>
+              ${users.map(u => `<div class="player-select-card ${matchConfig.player1===u.id?'selected':''}" onclick="setMatchProp('player1','${u.id}')">
+                ${u.pfp ? `<img src="${esc(u.pfp)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover">` : `<div style="width:28px;height:28px;border-radius:50%;background:${avatarColor(u.name)}22;color:${avatarColor(u.name)};display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:800">${initials(u.name)}</div>`}
+                <span style="font-weight:700;font-size:.82rem">${esc(u.name)}</span>
+                <span class="player-elo-badge">${fmtElo(loadedPlayers[u.id] || ELO_BASE)}</span>
+              </div>`).join('')}
+            </div>
+            <div>
+              <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--blue);margin-bottom:8px">Player 2</div>
+              ${users.map(u => `<div class="player-select-card ${matchConfig.player2===u.id?'selected':''}" style="${matchConfig.player2===u.id?'border-color:rgba(74,158,255,0.4);background:var(--blue-dim)':''}" onclick="setMatchProp('player2','${u.id}')">
+                ${u.pfp ? `<img src="${esc(u.pfp)}" style="width:28px;height:28px;border-radius:50%;object-fit:cover">` : `<div style="width:28px;height:28px;border-radius:50%;background:${avatarColor(u.name)}22;color:${avatarColor(u.name)};display:flex;align-items:center;justify-content:center;font-size:.6rem;font-weight:800">${initials(u.name)}</div>`}
+                <span style="font-weight:700;font-size:.82rem">${esc(u.name)}</span>
+                <span class="player-elo-badge">${fmtElo(loadedPlayers[u.id] || ELO_BASE)}</span>
+              </div>`).join('')}
+            </div>
+          </div>
+        </div>`;
+    }
+  }
+
+  function renderStep3(usersById) {
+    const isDoubles = matchConfig.matchType === 'doubles';
+    let p1name, p2name;
+    if (isDoubles) {
+      p1name = matchConfig.team1.map(id => usersById[id]?.name || '?').join(' & ');
+      p2name = matchConfig.team2.map(id => usersById[id]?.name || '?').join(' & ');
+    } else {
+      p1name = usersById[matchConfig.player1]?.name || 'P1';
+      p2name = usersById[matchConfig.player2]?.name || 'P2';
+    }
+    return `
+      <div class="match-wizard-step active" id="step-3">
+        <div style="background:var(--bg-surface);border:1px solid var(--border);border-radius:10px;padding:20px;margin-bottom:16px">
+          <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;text-align:center">
+            <div><div style="font-weight:800;font-size:.9rem;color:var(--yellow)">${esc(p1name)}</div></div>
+            <div style="font-family:var(--display);font-size:1.2rem;color:var(--text-muted)">VS</div>
+            <div><div style="font-weight:800;font-size:.9rem;color:var(--blue)">${esc(p2name)}</div></div>
+          </div>
+          <div style="display:flex;justify-content:center;gap:20px;margin-top:14px;font-size:.8rem;color:var(--text-secondary)">
+            <span>Mode: <strong style="color:var(--text)">${matchConfig.mode}</strong></span>
+            <span>Type: <strong style="color:var(--text)">${matchConfig.matchType}</strong></span>
+            <span>Win to: <strong style="color:var(--text)">${matchConfig.winTo}</strong></span>
+          </div>
+        </div>
+        <p style="font-size:.82rem;color:var(--text-secondary);text-align:center">Confirm and start the match tracking. When the match ends, click Resolve to enter scores.</p>
+      </div>`;
+  }
+
+  function renderStep4(usersById) {
+    const isDoubles = matchConfig.matchType === 'doubles';
+    const p1name = isDoubles ? matchConfig.team1.map(id => usersById[id]?.name || '?').join(' & ') : (usersById[matchConfig.player1]?.name || 'P1');
+    const p2name = isDoubles ? matchConfig.team2.map(id => usersById[id]?.name || '?').join(' & ') : (usersById[matchConfig.player2]?.name || 'P2');
+    return `
+      <div class="match-wizard-step active" id="step-4">
+        <p style="text-align:center;color:var(--text-secondary);margin-bottom:16px;font-size:.84rem">Match in progress. Enter the final scores when done.</p>
+        <div style="display:grid;grid-template-columns:1fr 40px 1fr;gap:10px;align-items:center;margin-bottom:16px">
+          <div>
+            <label style="display:block;font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--yellow);margin-bottom:6px">${esc(p1name)}</label>
+            <input type="number" id="final-score1" min="0" max="99" placeholder="0" style="text-align:center;font-size:1.4rem;font-family:var(--display)">
+          </div>
+          <div style="text-align:center;font-family:var(--display);font-size:1.5rem;color:var(--text-muted);padding-top:24px">—</div>
+          <div>
+            <label style="display:block;font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--blue);margin-bottom:6px">${esc(p2name)}</label>
+            <input type="number" id="final-score2" min="0" max="99" placeholder="0" style="text-align:center;font-size:1.4rem;font-family:var(--display)">
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // Load player elos
+  const playerIds = users.map(u => u.id);
+  const loadedPlayers = {};
+  await Promise.all(playerIds.map(async id => {
+    loadedPlayers[id] = await getPlayerElo(id);
+  }));
+  const usersById = Object.fromEntries(users.map(u => [u.id, u]));
+
+  window.setMatchProp = (k, v) => { matchConfig[k] = v; updateModalStep(); };
+  window.toggleTeamPlayer = (team, uid, elo) => {
+    const arr = team === 1 ? matchConfig.team1 : matchConfig.team2;
+    const other = team === 1 ? matchConfig.team2 : matchConfig.team1;
+    if (other.includes(uid)) { showToast('Player already on other team', 'error'); return; }
+    const idx = arr.indexOf(uid);
+    if (idx >= 0) arr.splice(idx, 1);
+    else if (arr.length < 2) arr.push(uid);
+    else { showToast('Team already has 2 players', 'error'); return; }
+    updateModalStep();
+  };
+
+  function updateModalStep() {
+    const body = document.getElementById('modal-body');
+    const footer = document.getElementById('modal-footer');
+    if (step === 1) {
+      body.innerHTML = renderStep1();
+      footer.innerHTML = `<button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="wizardNext()">Next: Select Players →</button>`;
+    } else if (step === 2) {
+      body.innerHTML = renderStep2(loadedPlayers);
+      footer.innerHTML = `<button class="btn btn-secondary" onclick="wizardBack()">← Back</button><button class="btn btn-primary" onclick="wizardNext()">Next: Confirm →</button>`;
+    } else if (step === 3) {
+      body.innerHTML = renderStep3(usersById);
+      footer.innerHTML = `<button class="btn btn-secondary" onclick="wizardBack()">← Back</button><button class="btn btn-primary" onclick="wizardNext()">Start Match →</button>`;
+    } else if (step === 4) {
+      body.innerHTML = renderStep4(usersById);
+      footer.innerHTML = `<button class="btn btn-secondary" onclick="wizardBack()">← Back</button><button class="btn btn-primary" id="resolve-match-btn">Resolve & Submit</button>`;
+      document.getElementById('resolve-match-btn').onclick = () => resolveMatch(usersById, loadedPlayers);
+    }
+  }
+
+  window.wizardNext = () => {
+    if (step === 1) {
+      step = 2; updateModalStep();
+    } else if (step === 2) {
+      const isDoubles = matchConfig.matchType === 'doubles';
+      if (isDoubles && (matchConfig.team1.length < 2 || matchConfig.team2.length < 2)) { showToast('Each team needs 2 players', 'error'); return; }
+      if (!isDoubles && (!matchConfig.player1 || !matchConfig.player2)) { showToast('Select both players', 'error'); return; }
+      if (!isDoubles && matchConfig.player1 === matchConfig.player2) { showToast('Players must be different', 'error'); return; }
+      step = 3; updateModalStep();
+    } else if (step === 3) {
+      step = 4; updateModalStep();
+    }
+  };
+  window.wizardBack = () => { step = Math.max(1, step - 1); updateModalStep(); };
+
+  async function resolveMatch(usersById, loadedPlayers) {
+    const score1 = parseInt(document.getElementById('final-score1')?.value) || 0;
+    const score2 = parseInt(document.getElementById('final-score2')?.value) || 0;
+    if (score1 === score2) { showToast('Scores cannot be equal', 'error'); return; }
+    if (Math.max(score1, score2) < matchConfig.winTo && score1 !== matchConfig.winTo && score2 !== matchConfig.winTo) {
+      // Allow any score, just warn if neither hit winTo
+    }
+
+    const isDoubles = matchConfig.matchType === 'doubles';
+    const winner = score1 > score2 ? 1 : 2;
+    const winnerScore = Math.max(score1, score2);
+    const loserScore = Math.min(score1, score2);
+    const maxScore = matchConfig.winTo;
+
+    const btn = document.getElementById('resolve-match-btn');
+    btn.disabled = true; btn.textContent = 'Processing…';
+
+    try {
+      let eloDeltas = {}; let elosBefore = {}; let elosAfter = {};
+      let p1Before, p1After, p2Before, p2After;
+
+      if (!isDoubles) {
+        const p1Id = matchConfig.player1; const p2Id = matchConfig.player2;
+        p1Before = loadedPlayers[p1Id] || ELO_BASE;
+        p2Before = loadedPlayers[p2Id] || ELO_BASE;
+        const p1data = await getPlayerData(p1Id); const p2data = await getPlayerData(p2Id);
+        const p1phase = getPlayerPhase(p1data?.gamesPlayed || 0);
+        const p2phase = getPlayerPhase(p2data?.gamesPlayed || 0);
+
+        const winnerId = winner === 1 ? p1Id : p2Id;
+        const loserId = winner === 1 ? p2Id : p1Id;
+        const winnerEloBefore = winner === 1 ? p1Before : p2Before;
+        const loserEloBefore = winner === 1 ? p2Before : p1Before;
+        const winnerPhase = winner === 1 ? p1phase : p2phase;
+        const loserPhase = winner === 1 ? p2phase : p1phase;
+        const winnerData = winner === 1 ? p1data : p2data;
+        const compStreak = matchConfig.mode !== 'casual' ? (winnerData?.compStreak || 0) : 0;
+
+        const { winnerDelta, loserDelta } = calcSinglesElo(winnerEloBefore, loserEloBefore, winnerScore, loserScore, maxScore, matchConfig.mode, winnerPhase, loserPhase, compStreak);
+
+        p1After = winner === 1 ? clampElo(p1Before + winnerDelta) : clampElo(p1Before + loserDelta);
+        p2After = winner === 2 ? clampElo(p2Before + winnerDelta) : clampElo(p2Before + loserDelta);
+        const p1delta = p1After - p1Before; const p2delta = p2After - p2Before;
+        eloDeltas = { [p1Id]: p1delta, [p2Id]: p2delta };
+        elosBefore = { [p1Id]: p1Before, [p2Id]: p2Before };
+        elosAfter = { [p1Id]: p1After, [p2Id]: p2After };
+      } else {
+        const t1 = matchConfig.team1; const t2 = matchConfig.team2;
+        const allIds = [...t1, ...t2];
+        const playerDatas = {};
+        const playerElos = {};
+        for (const id of allIds) { playerDatas[id] = await getPlayerData(id); playerElos[id] = loadedPlayers[id] || ELO_BASE; elosBefore[id] = playerElos[id]; }
+
+        const t1elos = t1.map(id => playerElos[id]);
+        const t2elos = t2.map(id => playerElos[id]);
+        const phases = [...t1.map(id => getPlayerPhase(playerDatas[id]?.gamesPlayed || 0)), ...t2.map(id => getPlayerPhase(playerDatas[id]?.gamesPlayed || 0))];
+        const winnerTeamIdx = winner - 1;
+        const winnerIds = winner === 1 ? t1 : t2;
+        const winnerData0 = playerDatas[winnerIds[0]];
+        const compStreak = matchConfig.mode !== 'casual' ? (winnerData0?.compStreak || 0) : 0;
+
+        const deltas = calcDoublesElo(t1elos, t2elos, winnerTeamIdx, winnerScore, loserScore, maxScore, matchConfig.mode, phases, compStreak);
+        t1.forEach((id, i) => { const d = i === 0 ? deltas.w0 : deltas.w1; const l = i === 0 ? deltas.l0 : deltas.l1; eloDeltas[id] = winner === 1 ? d : (i === 0 ? deltas.l0 : deltas.l1); elosAfter[id] = clampElo(elosBefore[id] + eloDeltas[id]); });
+        t2.forEach((id, i) => { eloDeltas[id] = winner === 2 ? (i === 0 ? deltas.w0 : deltas.w1) : (i === 0 ? deltas.l0 : deltas.l1); elosAfter[id] = clampElo(elosBefore[id] + eloDeltas[id]); });
+      }
+
+      // Compute avg elo of participants
+      const allParticipantIds = isDoubles ? [...matchConfig.team1, ...matchConfig.team2] : [matchConfig.player1, matchConfig.player2];
+      const avgElo = allParticipantIds.reduce((s, id) => s + (elosBefore[id] || ELO_BASE), 0) / allParticipantIds.length;
+
+      // Get last match hash for chain
+      let previousHash = '';
+      try {
+        const lastMatch = await dbGet('lastMatchHash');
+        previousHash = lastMatch || '';
+      } catch { }
+
+      // Build match object
+      const matchId = genId();
+      const matchObj = {
+        id: matchId, matchType: matchConfig.matchType, mode: matchConfig.mode, winTo: matchConfig.winTo,
+        score1, score2, winner, avgElo, timestamp: Date.now(), status: 'completed',
+        trackerId: currentUser.id, trackerName: currentUser.name,
+        eloDeltas, elosBefore, elosAfter, previousHash, playByPlay: [], hidden: false
+      };
+      if (!isDoubles) {
+        matchObj.player1 = matchConfig.player1; matchObj.player2 = matchConfig.player2;
+        matchObj.p1EloBefore = elosBefore[matchConfig.player1]; matchObj.p1EloAfter = elosAfter[matchConfig.player1];
+        matchObj.p2EloBefore = elosBefore[matchConfig.player2]; matchObj.p2EloAfter = elosAfter[matchConfig.player2];
+      } else {
+        matchObj.team1 = matchConfig.team1; matchObj.team2 = matchConfig.team2;
+      }
+
+      // Generate match hash
+      matchObj.hash = await buildMatchHash(matchObj, previousHash);
+
+      // Save match
+      await dbSet(`matches/${matchId}`, matchObj);
+      await dbSet('lastMatchHash', matchObj.hash);
+
+      // Apply elo transactions and update player stats
+      for (const id of allParticipantIds) {
+        const delta = eloDeltas[id] || 0;
+        await applyEloTransaction(id, matchId, delta, `Match ${matchId}`);
+        const pdata = await getPlayerData(id);
+        const won = isDoubles ? (winner === 1 ? matchConfig.team1.includes(id) : matchConfig.team2.includes(id)) : (winner === 1 ? id === matchConfig.player1 : id === matchConfig.player2);
+        const isCompStreak = matchConfig.mode !== 'casual';
+        const compStreakEligible = matchConfig.mode !== 'casual';
+        const updates = {
+          elo: elosAfter[id],
+          gamesPlayed: (pdata?.gamesPlayed || 0) + 1,
+          wins: (pdata?.wins || 0) + (won ? 1 : 0),
+          losses: (pdata?.losses || 0) + (won ? 0 : 1),
+          phase: getPlayerPhase((pdata?.gamesPlayed || 0) + 1),
+        };
+        if (compStreakEligible) {
+          updates.compStreak = won ? (pdata?.compStreak || 0) + 1 : 0;
+          updates.compStreakBest = Math.max(pdata?.compStreakBest || 0, updates.compStreak);
+        }
+        if (matchConfig.mode === 'casual') {
+          updates.casualStreak = won ? (pdata?.casualStreak || 0) + 1 : 0;
+          updates.casualStreakBest = Math.max(pdata?.casualStreakBest || 0, updates.casualStreak);
+        }
+        // Track pending elo delta for offline notification
+        await dbPush(`players/${id}/pendingEloDeltas`, { delta, matchId, timestamp: Date.now(), shown: false });
+        await dbUpdate(`players/${id}`, updates);
+      }
+
+      closeModal();
+      showToast('Match recorded!', 'success');
+      // Show elo popup for current user
+      if (eloDeltas[currentUser.id] !== undefined) showEloPopup(eloDeltas[currentUser.id]);
+      updateHeaderElo();
+      renderMatches();
+    } catch (err) {
+      showToast('Failed to save match: ' + err.message, 'error');
+      btn.disabled = false; btn.textContent = 'Resolve & Submit';
+    }
+  }
+
+  openModal('New Match', renderStep1(), `<button class="btn btn-secondary" onclick="closeModal()">Cancel</button><button class="btn btn-primary" onclick="wizardNext()">Next: Select Players →</button>`);
+}
+
+// ===================== LEADERBOARD =====================
+async function renderLeaderboard() {
+  const c = document.getElementById('page-content');
+  try {
+    const [playersData, usersData, doublesData] = await Promise.all([dbGet('players'), dbGet('users'), dbGet('doublesPairs')]);
+    const users = usersData || {};
+    const players = playersData || {};
+
+    let activeTab = 'singles';
+
+    function render(tab) {
+      activeTab = tab;
+      let html = '';
+
+      if (tab === 'singles') {
+        const list = Object.entries(players).map(([id, p]) => ({
+          id, ...p, name: users[id]?.name || 'Unknown', pfp: users[id]?.pfp || null, role: users[id]?.role
+        })).filter(p => p.role !== 'banned' && (p.gamesPlayed || 0) > 0).sort((a, b) => (b.elo || ELO_BASE) - (a.elo || ELO_BASE));
+
+        html = list.length === 0 ? `<div class="empty-state"><span class="emoji">🏆</span><h3>No Players Yet</h3><p>Complete matches to appear on the leaderboard.</p></div>` :
+          `<div class="card"><div style="padding:0">
+            ${list.map((p, i) => {
+          const phase = p.phase || 'placement';
+          const phaseBadge = phase === 'placement' ? `<span class="badge badge-yellow" style="font-size:.55rem">Placement ${Math.min(p.gamesPlayed || 0, PLACEMENT_GAMES)}/${PLACEMENT_GAMES}</span>` :
+            phase === 'volatile' ? `<span class="badge badge-blue" style="font-size:.55rem">Rising</span>` : '';
+          const rankClass = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
+          const rankDisp = i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1;
+          const wins = p.wins || 0; const losses = p.losses || 0;
+          const wr = (wins + losses) > 0 ? Math.round(wins / (wins + losses) * 100) : 0;
+          return `<div class="lb-row" onclick="navigate('profile','${p.id}')">
+              <div class="lb-rank ${rankClass}">${rankDisp}</div>
+              ${p.pfp ? `<img src="${esc(p.pfp)}" class="lb-avatar" onerror="this.style.display='none'">` : `<div class="lb-avatar-init" style="background:${avatarColor(p.name)}22;color:${avatarColor(p.name)}">${initials(p.name)}</div>`}
+              <div class="lb-info">
+                <div class="lb-name">${esc(p.name)} ${phaseBadge}
+                  ${p.compStreak >= 3 ? `<span class="streak-badge streak-comp">🔥 ${p.compStreak}W</span>` : ''}
+                </div>
+                <div class="lb-sub">${wins}W / ${losses}L · ${wr}% WR · ${p.gamesPlayed || 0} games</div>
+              </div>
+              <div class="lb-elo">${fmtElo(p.elo || ELO_BASE)}</div>
+            </div>`;
+        }).join('')}
+          </div></div>`;
+      } else if (tab === 'doubles') {
+        // Doubles leaderboard: pairs with averaged elo
+        const pairs = doublesData ? Object.entries(doublesData).map(([id, pair]) => ({ id, ...pair })) : [];
+        const rankedPairs = pairs.map(pair => {
+          const p1elo = players[pair.player1]?.elo || ELO_BASE;
+          const p2elo = players[pair.player2]?.elo || ELO_BASE;
+          const p1name = users[pair.player1]?.name || 'Unknown';
+          const p2name = users[pair.player2]?.name || 'Unknown';
+          return { ...pair, avgElo: (p1elo + p2elo) / 2, p1name, p2name };
+        }).sort((a, b) => b.avgElo - a.avgElo);
+
+        html = `
+          <div style="margin-bottom:14px">
+            ${currentUser?.verified ? `<button class="btn btn-primary" onclick="showRequestPartnerModal()">+ Request Partner</button>` : ''}
+          </div>
+          ${rankedPairs.length === 0 ? `<div class="empty-state"><span class="emoji">🤝</span><h3>No Doubles Pairs</h3><p>Request a partner to appear here.</p></div>` :
+          `<div class="card"><div style="padding:0">
+              ${rankedPairs.map((pair, i) => {
+            const rankClass = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
+            const rankDisp = i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1;
+            return `<div class="lb-row">
+                  <div class="lb-rank ${rankClass}">${rankDisp}</div>
+                  <div class="lb-avatar-init" style="background:var(--blue-dim);color:var(--blue)">🤝</div>
+                  <div class="lb-info">
+                    <div class="lb-name"><span class="partner-badge">Doubles</span> ${esc(pair.p1name)} & ${esc(pair.p2name)}</div>
+                    <div class="lb-sub">${pair.wins || 0}W / ${pair.losses || 0}L</div>
+                  </div>
+                  <div class="lb-elo">${fmtElo(pair.avgElo)}</div>
+                </div>`;
+          }).join('')}
+            </div></div>`}`;
+      }
+
+      c.innerHTML = `
+        <div class="page">
+          <h1 class="page-title">🏆 <span class="accent">Leaderboard</span></h1>
+          <div class="tab-bar">
+            <button class="${tab === 'singles' ? 'active' : ''}" data-tab="singles">Singles</button>
+            <button class="${tab === 'doubles' ? 'active' : ''}" data-tab="doubles">Doubles</button>
+          </div>
+          ${html}
+        </div>`;
+      c.querySelectorAll('.tab-bar button').forEach(b => { if (b.dataset.tab) b.onclick = () => render(b.dataset.tab); });
+    }
+    render(activeTab);
+  } catch (err) {
+    c.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${esc(err.message)}</p></div>`;
+  }
+}
+
+function showRequestPartnerModal() {
+  openModal('Request Doubles Partner', `
+    <p style="font-size:.84rem;color:var(--text-secondary);margin-bottom:14px">Enter your partner's email to send a pairing request.</p>
+    <div class="form-group"><label>Partner Email</label><input type="email" id="partner-email" placeholder="partner@students.hackleyschool.org"></div>
+  `, `
+    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" id="partner-submit">Send Request</button>
+  `);
+  document.getElementById('partner-submit').onclick = async () => {
+    const email = document.getElementById('partner-email').value.trim().toLowerCase();
+    if (!email) { showToast('Enter email', 'error'); return; }
+    try {
+      const users = await dbGet('users');
+      const entry = Object.entries(users || {}).find(([_, u]) => u.email === email);
+      if (!entry) { showToast('User not found', 'error'); return; }
+      const [partnerId, partner] = entry;
+      if (partnerId === currentUser.id) { showToast('Cannot partner with yourself', 'error'); return; }
+      await dbPush('partnerRequests', { from: currentUser.id, fromName: currentUser.name, to: partnerId, toName: partner.name, status: 'pending', timestamp: Date.now() });
+      closeModal(); showToast('Request sent!', 'success');
+    } catch { showToast('Failed', 'error'); }
+  };
+}
+
+// ===================== PROFILE =====================
+async function renderProfile(userId) {
+  const c = document.getElementById('page-content');
+  const uid = userId || currentUser?.id;
+  if (!uid) { renderAuth(); return; }
+  try {
+    const [user, player, matchesData, ledgerData] = await Promise.all([
+      dbGet(`users/${uid}`), dbGet(`players/${uid}`), dbGet('matches'), dbGet(`eloLedger/${uid}`)
+    ]);
+    if (!user) { c.innerHTML = '<div class="empty-state"><h3>Player not found</h3></div>'; return; }
+
+    const isOwnProfile = uid === currentUser?.id;
+    const p = player || {};
+    const matches = matchesData ? Object.entries(matchesData).map(([id, m]) => ({ id, ...m })) : [];
+    const playerMatches = matches.filter(m => m.status === 'completed' && !m.hidden && (
+      m.player1 === uid || m.player2 === uid ||
+      (m.team1 || []).includes(uid) || (m.team2 || []).includes(uid)
+    )).sort((a, b) => b.timestamp - a.timestamp);
+
+    const ledger = ledgerData ? Object.entries(ledgerData).map(([id, t]) => ({ id, ...t })).sort((a, b) => b.timestamp - a.timestamp) : [];
+    const phase = p.phase || 'placement';
+    const phaseLabel = phase === 'placement' ? `Placement (${Math.min(p.gamesPlayed || 0, PLACEMENT_GAMES)}/${PLACEMENT_GAMES})` : phase === 'volatile' ? 'Rising (calibrating)' : 'Stable';
+
+    // ELO history for chart
+    const eloHistory = ledger.filter(t => t.valid !== false).reverse().reduce((acc, t) => {
+      acc.push({ elo: t.after, date: new Date(t.timestamp).toLocaleDateString() });
+      return acc;
+    }, [{ elo: ELO_BASE, date: 'Start' }]);
+
+    let activeTab = 'stats';
+
+    function render(tab) {
+      activeTab = tab;
+      c.innerHTML = `
+        <div class="page">
+          ${uid !== currentUser?.id ? `<button class="btn btn-ghost" style="margin-bottom:14px" onclick="navigate('leaderboard')">← Leaderboard</button>` : ''}
+          <div class="profile-header">
+            ${user.pfp ? `<img src="${esc(user.pfp)}" class="profile-avatar-large" onerror="this.style.display='none'">` : `<div class="profile-avatar-large-init" style="background:${avatarColor(user.name)}22;color:${avatarColor(user.name)}">${initials(user.name)}</div>`}
+            <div style="flex:1">
+              <div class="profile-name">
+                ${esc(user.name)}
+                ${p.compStreak >= 3 ? `<span class="streak-badge streak-comp">🔥 ${p.compStreak} Streak</span>` : ''}
+                ${p.casualStreak >= 3 ? `<span class="streak-badge streak-casual">🎮 ${p.casualStreak}</span>` : ''}
+              </div>
+              ${user.bio ? `<p class="profile-bio">${esc(user.bio)}</p>` : ''}
+              <div style="font-size:.72rem;color:var(--text-muted);margin-top:6px">${phaseLabel} · Joined ${new Date(user.createdAt || Date.now()).toLocaleDateString()}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-family:var(--display);font-size:3rem;color:var(--yellow);letter-spacing:.04em;text-shadow:0 0 20px rgba(245,200,0,0.3)">${fmtElo(p.elo || ELO_BASE)}</div>
+              <div style="font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted)">ELO Rating</div>
+              ${isOwnProfile ? `<button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="showEditProfile()">Edit Profile</button>` : ''}
+            </div>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-label">Games Played</div><div class="stat-value">${p.gamesPlayed || 0}</div></div>
+            <div class="stat-card"><div class="stat-label">Wins</div><div class="stat-value green">${p.wins || 0}</div></div>
+            <div class="stat-card"><div class="stat-label">Losses</div><div class="stat-value red">${p.losses || 0}</div></div>
+            <div class="stat-card"><div class="stat-label">Win Rate</div><div class="stat-value yellow">${(p.gamesPlayed || 0) > 0 ? Math.round((p.wins || 0) / (p.gamesPlayed || 1) * 100) : 0}%</div></div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
+            <div class="stat-card"><div class="stat-label">Best Comp Streak</div><div class="stat-value yellow" style="font-size:1.5rem">${p.compStreakBest || 0}</div></div>
+            <div class="stat-card"><div class="stat-label">Best Casual Streak</div><div class="stat-value" style="font-size:1.5rem">${p.casualStreakBest || 0}</div></div>
+            <div class="stat-card"><div class="stat-label">Phase</div><div class="stat-value" style="font-size:1rem;color:${phase === 'stable' ? 'var(--green)' : phase === 'volatile' ? 'var(--blue)' : 'var(--orange)'}">${phase.toUpperCase()}</div></div>
+          </div>
+
+          <div class="tab-bar">
+            <button class="${tab === 'stats' ? 'active' : ''}" data-tab="stats">Stats & Charts</button>
+            <button class="${tab === 'matches' ? 'active' : ''}" data-tab="matches">Match History (${playerMatches.length})</button>
+            <button class="${tab === 'ledger' ? 'active' : ''}" data-tab="ledger">ELO Ledger</button>
+          </div>
+
+          ${tab === 'stats' ? renderProfileStats(p, eloHistory, playerMatches) : ''}
+          ${tab === 'matches' ? renderProfileMatches(playerMatches, uid) : ''}
+          ${tab === 'ledger' ? renderProfileLedger(ledger) : ''}
+        </div>`;
+
+      c.querySelectorAll('.tab-bar button').forEach(b => { if (b.dataset.tab) b.onclick = () => render(b.dataset.tab); });
+
+      // Draw chart after render
+      if (tab === 'stats' && eloHistory.length > 1) {
+        setTimeout(() => drawEloChart(eloHistory), 100);
+      }
+    }
+    render(activeTab);
+  } catch (err) {
+    c.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${esc(err.message)}</p></div>`;
+  }
+}
+
+function renderProfileStats(p, eloHistory, matches) {
+  const singles = matches.filter(m => m.matchType === 'singles');
+  const doubles = matches.filter(m => m.matchType === 'doubles');
+  const compMatches = matches.filter(m => m.mode === 'competitive');
+  const tourneyMatches = matches.filter(m => m.mode === 'tournament');
+  return `
+    <div class="chart-wrap"><canvas id="elo-chart"></canvas></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+      <div class="stat-card"><div class="stat-label">Singles</div><div class="stat-value" style="font-size:1.4rem">${singles.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Doubles</div><div class="stat-value" style="font-size:1.4rem">${doubles.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Competitive</div><div class="stat-value yellow" style="font-size:1.4rem">${compMatches.length}</div></div>
+      <div class="stat-card"><div class="stat-label">Tournament</div><div class="stat-value" style="font-size:1.4rem;color:var(--orange)">${tourneyMatches.length}</div></div>
+    </div>`;
+}
+
+function drawEloChart(history) {
+  const canvas = document.getElementById('elo-chart');
+  if (!canvas) return;
+  if (canvas._chart) canvas._chart.destroy();
+  const ctx = canvas.getContext('2d');
+  canvas._chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: history.map(h => h.date),
+      datasets: [{
+        label: 'ELO Rating',
+        data: history.map(h => h.elo),
+        borderColor: '#f5c800',
+        backgroundColor: 'rgba(245,200,0,0.08)',
+        borderWidth: 2,
+        pointRadius: history.length < 20 ? 4 : 1,
+        pointBackgroundColor: '#f5c800',
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => 'ELO: ' + ctx.parsed.y.toFixed(2) } } },
+      scales: {
+        x: { ticks: { color: '#4a4a30', font: { size: 10 } }, grid: { color: '#2a2a0a' } },
+        y: { ticks: { color: '#4a4a30', font: { size: 10 } }, grid: { color: '#2a2a0a' }, min: 0, max: 10 }
+      }
+    }
+  });
+}
+
+function renderProfileMatches(matches, uid) {
+  if (matches.length === 0) return `<div class="empty-state"><span class="emoji">🏐</span><h3>No Matches Yet</h3></div>`;
+  return `
+    <div class="card">
+      <div style="padding:0">
+        ${matches.slice(0, 30).map(m => {
+    const isDoubles = m.matchType === 'doubles';
+    const won = isDoubles ? (m.winner === 1 ? (m.team1 || []).includes(uid) : (m.team2 || []).includes(uid)) : (m.winner === 1 ? m.player1 === uid : m.player2 === uid);
+    const delta = m.eloDeltas?.[uid] || (m.player1 === uid ? (m.p1EloAfter - m.p1EloBefore) : (m.p2EloAfter - m.p2EloBefore)) || 0;
+    const modeColor = m.mode === 'tournament' ? 'var(--orange)' : m.mode === 'competitive' ? 'var(--yellow)' : 'var(--text-muted)';
+    return `
+          <div class="lb-row" onclick="navigate('match-detail','${m.id}')">
+            <div style="width:36px;text-align:center;font-size:1.2rem">${won ? '🏆' : '💀'}</div>
+            <div class="lb-info">
+              <div class="lb-name" style="font-size:.8rem">${m.score1}—${m.score2} · <span style="color:${modeColor}">${m.mode}</span> ${m.matchType}</div>
+              <div class="lb-sub">${timeAgo(m.timestamp)}</div>
+            </div>
+            <div class="${delta >= 0 ? 'elo-delta-pos' : 'elo-delta-neg'}">${delta >= 0 ? '+' : ''}${delta.toFixed(2)}</div>
+          </div>`;
+  }).join('')}
+      </div>
+    </div>`;
+}
+
+function renderProfileLedger(ledger) {
+  if (ledger.length === 0) return `<div class="empty-state"><h3>No ELO History</h3></div>`;
+  return `
+    <div class="card">
+      <table class="admin-table">
+        <thead><tr><th>Match ID</th><th>Before</th><th>After</th><th>Delta</th><th>Valid</th><th>Time</th></tr></thead>
+        <tbody>
+          ${ledger.slice(0, 50).map(t => `
+            <tr>
+              <td style="font-family:var(--mono);font-size:.7rem;color:var(--text-muted)">${(t.matchId || '').slice(0, 10)}…</td>
+              <td style="font-family:var(--mono)">${fmtElo(t.before)}</td>
+              <td style="font-family:var(--mono)">${fmtElo(t.after)}</td>
+              <td class="${(t.delta || 0) >= 0 ? 'elo-delta-pos' : 'elo-delta-neg'}">${(t.delta || 0) >= 0 ? '+' : ''}${(t.delta || 0).toFixed(2)}</td>
+              <td>${t.valid !== false ? '<span class="badge badge-green">✓</span>' : '<span class="badge badge-red">Voided</span>'}</td>
+              <td style="color:var(--text-muted)">${timeAgo(t.timestamp)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function showEditProfile() {
+  openModal('Edit Profile', `
+    <div class="form-group"><label>Display Name</label><input type="text" id="ep-name" value="${esc(currentUser.name || '')}"></div>
+    <div class="form-group"><label>Bio</label><textarea id="ep-bio" placeholder="Tell people about yourself…" rows="2">${esc(currentUser.bio || '')}</textarea></div>
+    <div class="form-group"><label>Profile Picture URL</label><input type="url" id="ep-pfp" value="${esc(currentUser.pfp || '')}" placeholder="https://…"></div>
+  `, `
+    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" id="ep-save">Save</button>
+  `);
+  document.getElementById('ep-save').onclick = async () => {
+    const name = document.getElementById('ep-name').value.trim();
+    const bio = document.getElementById('ep-bio').value.trim();
+    const pfp = document.getElementById('ep-pfp').value.trim();
+    if (!name) { showToast('Name required', 'error'); return; }
+    try {
+      await dbUpdate(`users/${currentUser.id}`, { name, bio, pfp });
+      currentUser.name = name; currentUser.bio = bio; currentUser.pfp = pfp; saveSession(currentUser);
+      closeModal(); showToast('Profile updated!', 'success'); renderProfile(currentUser.id);
+    } catch { showToast('Failed', 'error'); }
+  };
+}
+
+// ===================== RULES =====================
+async function renderRules() {
+  const c = document.getElementById('page-content');
+  // Inline rules since we can't load from external file in single-page app
+  const rules = `
+    <h2>🏐 Hackley Spikeball Rules</h2>
+    <p>Welcome to HSR — the official Hackley Spikeball Rated ladder. These rules govern all ranked matches.</p>
+
+    <h2>Game Setup</h2>
+    <p>Spikeball is played 1v1 (singles) or 2v2 (doubles). Set up the Spikeball net in an open area with at least 6 feet clearance in all directions.</p>
+    <ul>
+      <li>The team that wins the coin toss serves first.</li>
+      <li>Server stands behind the serving zone (roughly 6 feet from the net).</li>
+      <li>Teams can spread out in any direction once the ball is served.</li>
+    </ul>
+
+    <h2>Serving</h2>
+    <p>The server must toss the ball up and hit it down onto the net. Serves must be from outside the service zone. Players have two attempts to serve.</p>
+    <ul>
+      <li>Ball must bounce off net cleanly — no rim shots on serves.</li>
+      <li>Receiving team can't move until ball is hit.</li>
+      <li>A service fault (2nd fault) gives the point to the receiving team.</li>
+    </ul>
+
+    <h2>Gameplay</h2>
+    <p>Teams alternate hitting the ball into the net. Each team has up to 3 touches to return the ball. The ball must be hit, not caught or carried.</p>
+    <ul>
+      <li>No player can hit the ball twice in a row.</li>
+      <li>The ball may not touch the rim of the net.</li>
+      <li>If the ball hits the rim, the rally is replayed (let).</li>
+      <li>Body hits are illegal — hands/fists only.</li>
+    </ul>
+
+    <h2>Scoring</h2>
+    <p>A point is scored when the opposing team fails to return the ball. Standard games are played to 21 (win by 2). Win scores available: 3, 7, 11, 15, 17, 21.</p>
+
+    <h2>Match Modes</h2>
+    <ul>
+      <li><strong style="color:var(--text-muted)">Casual:</strong> 50% ELO impact. Good for practice and fun games.</li>
+      <li><strong style="color:var(--yellow)">Competitive:</strong> 100% ELO impact. Standard ranked match.</li>
+      <li><strong style="color:var(--orange)">Tournament:</strong> 125% ELO impact. Reserved for official tournaments.</li>
+    </ul>
+
+    <h2>ELO System</h2>
+    <p>HSR uses a custom ELO system ranging from 0.00 to 10.00. New players begin placement at 5.00 for 5 games, then enter the rated ladder. Ratings adjust based on opponent strength, score margin, mode, and win streaks.</p>
+    <ul>
+      <li><strong>10.0</strong> — Near impossible; requires sustained dominance over top players.</li>
+      <li><strong>9.0+</strong> — Elite tier; virtually never loses.</li>
+      <li><strong>8.0+</strong> — Very strong; occasional losses only.</li>
+      <li><strong>5.0</strong> — Average rated player.</li>
+    </ul>
+
+    <h2>Disputes</h2>
+    <p>If a player believes a match result is incorrect, they may dispute it within the app. Admins will review and take appropriate action. Abuse of the dispute system may result in sanctions.</p>
+
+    <h2>Conduct</h2>
+    <p>All players are expected to maintain respectful conduct. Unsportsmanlike behavior, harassment, or match manipulation can result in ELO rollbacks or bans.</p>
+
+    <h2>Questions?</h2>
+    <p>Contact an HSR admin or tracker for clarification on any rules.</p>
+  `;
+
+  c.innerHTML = `
+    <div class="page">
+      <h1 class="page-title">📋 <span class="accent">Rules</span></h1>
+      <div class="card">
+        <div class="card-body rules-content">${rules}</div>
+      </div>
+    </div>`;
+}
+
+// ===================== INTEGRITY CHECK =====================
+async function runIntegrityCheck() {
+  if (!currentUser) return;
+  try {
+    const [matchesData, playersData] = await Promise.all([dbGet('matches'), dbGet('players')]);
+    if (!matchesData) return;
+
+    const matches = Object.entries(matchesData).map(([id, m]) => ({ id, ...m })).filter(m => m.status === 'completed').sort((a, b) => a.timestamp - b.timestamp);
+
+    const violations = [];
+    let prevHash = '';
+
+    for (const match of matches) {
+      if (!match.hash) continue;
+      // Verify hash chain
+      const expectedHash = await buildMatchHash(match, match.previousHash || '');
+      if (match.hash !== expectedHash) {
+        violations.push({ type: 'hash_mismatch', matchId: match.id, reason: 'Hash does not match computed value' });
+      }
+      if (prevHash && match.previousHash && match.previousHash !== prevHash) {
+        violations.push({ type: 'chain_broken', matchId: match.id, reason: 'Hash chain broken' });
+      }
+      prevHash = match.hash;
+    }
+
+    if (violations.length > 0) {
+      for (const v of violations) {
+        await dbPush('integrityViolations', { ...v, reportedAt: Date.now(), reportedBy: currentUser.id });
+      }
+    }
+  } catch { }
+}
+
+// ===================== ADMIN =====================
+async function renderAdmin() {
+  const c = document.getElementById('page-content');
+  if (!currentUser?.isAdmin && !currentUser?.isTracker) { c.innerHTML = '<div class="empty-state"><h3>Access Denied</h3></div>'; return; }
+  try {
+    const [matchesData, usersData, disputesData, integrityData, partnerReqData] = await Promise.all([
+      dbGet('matches'), dbGet('users'), dbGet('disputes'), dbGet('integrityViolations'), dbGet('partnerRequests')
+    ]);
+    const matches = matchesData ? Object.entries(matchesData).map(([id, m]) => ({ id, ...m })) : [];
+    const users = usersData ? Object.entries(usersData).map(([id, u]) => ({ id, ...u })) : [];
+    const disputes = disputesData ? Object.entries(disputesData).map(([id, d]) => ({ id, ...d })).filter(d => d.status === 'pending') : [];
+    const violations = integrityData ? Object.entries(integrityData).map(([id, v]) => ({ id, ...v })) : [];
+    const partnerReqs = partnerReqData ? Object.entries(partnerReqData).map(([id, r]) => ({ id, ...r })).filter(r => r.status === 'pending') : [];
+
+    let tab = 'matches';
+    const usersById = Object.fromEntries((usersData ? Object.entries(usersData) : []).map(([id, u]) => [id, u]));
+
+    function render(t) {
+      tab = t;
+      c.innerHTML = `
+        <div class="page">
+          <h1 class="page-title">⚙ <span class="accent">Admin</span></h1>
+          <div class="tab-bar">
+            <button class="${tab === 'matches' ? 'active' : ''}" data-tab="matches">Matches</button>
+            ${currentUser.isAdmin ? `
+              <button class="${tab === 'users' ? 'active' : ''}" data-tab="users">Users (${users.length})</button>
+              <button class="${tab === 'disputes' ? 'active' : ''}" data-tab="disputes">Disputes ${disputes.length > 0 ? `<span style="background:var(--red);color:#fff;padding:1px 5px;border-radius:4px;font-size:.55rem;margin-left:4px">${disputes.length}</span>` : ''}</button>
+              <button class="${tab === 'integrity' ? 'active' : ''}" data-tab="integrity">Integrity ${violations.length > 0 ? `<span style="background:var(--red);color:#fff;padding:1px 5px;border-radius:4px;font-size:.55rem;margin-left:4px">${violations.length}</span>` : ''}</button>
+              <button class="${tab === 'partners' ? 'active' : ''}" data-tab="partners">Partners ${partnerReqs.length > 0 ? `<span style="background:var(--yellow);color:var(--black);padding:1px 5px;border-radius:4px;font-size:.55rem;margin-left:4px">${partnerReqs.length}</span>` : ''}</button>
+            ` : ''}
+          </div>
+
+          ${tab === 'matches' ? `
+            <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+              <button class="btn btn-primary" onclick="showNewMatchModal()">+ New Match</button>
+            </div>
+            <div class="card"><table class="admin-table">
+              <thead><tr><th>Match</th><th>Score</th><th>Mode</th><th>Date</th><th>Disputed</th><th>Actions</th></tr></thead>
+              <tbody>
+                ${matches.sort((a, b) => b.timestamp - a.timestamp).slice(0, 50).map(m => {
+        const isD = m.matchType === 'doubles';
+        const p1name = isD ? (m.team1 || []).map(id => usersById[id]?.name || 'U').join(' & ') : (usersById[m.player1]?.name || 'P1');
+        const p2name = isD ? (m.team2 || []).map(id => usersById[id]?.name || 'U').join(' & ') : (usersById[m.player2]?.name || 'P2');
+        return `<tr>
+                  <td style="font-size:.78rem;font-weight:700">${esc(p1name)} vs ${esc(p2name)}</td>
+                  <td style="font-family:var(--mono)">${m.score1}—${m.score2}</td>
+                  <td><span class="badge ${m.mode === 'tournament' ? 'badge-yellow' : m.mode === 'competitive' ? 'badge-yellow' : 'badge-muted'}">${m.mode}</span></td>
+                  <td style="color:var(--text-muted);font-size:.72rem">${new Date(m.timestamp).toLocaleDateString()}</td>
+                  <td>${m.disputed ? '<span class="badge badge-red">⚑</span>' : '—'}</td>
+                  <td>
+                    <div style="display:flex;gap:4px">
+                      <button class="btn btn-secondary btn-sm" onclick="navigate('match-detail','${m.id}')">View</button>
+                      ${currentUser.isAdmin ? `<button class="btn btn-danger btn-sm" onclick="adminDeleteMatch('${m.id}')">Delete</button>` : ''}
+                    </div>
+                  </td>
+                </tr>`;
+      }).join('')}
+              </tbody>
+            </table></div>
+          ` : ''}
+
+          ${tab === 'users' && currentUser.isAdmin ? `
+            <div class="card"><table class="admin-table">
+              <thead><tr><th>Name</th><th>Email</th><th>ELO</th><th>Role</th><th>Actions</th></tr></thead>
+              <tbody>
+                ${users.sort((a, b) => a.name?.localeCompare(b.name || '')).map(u => `
+                  <tr>
+                    <td style="font-weight:700;cursor:pointer" onclick="navigate('profile','${u.id}')">${esc(u.name)}</td>
+                    <td style="color:var(--text-muted);font-size:.75rem">${esc(u.email)}</td>
+                    <td style="font-family:var(--mono)">${fmtElo(u.elo || ELO_BASE)}</td>
+                    <td>
+                      <select class="admin-select" data-uid="${u.id}" onchange="adminSetRole('${u.id}',this.value)">
+                        <option value="user" ${u.role === 'user' ? 'selected' : ''}>User</option>
+                        <option value="admin" ${u.isAdmin ? 'selected' : ''}>Admin</option>
+                        <option value="tracker" ${u.isTracker ? 'selected' : ''}>Tracker</option>
+                        <option value="banned" ${u.role === 'banned' ? 'selected' : ''}>Banned</option>
+                      </select>
+                    </td>
+                    <td>
+                      <div style="display:flex;gap:4px">
+                        <button class="btn btn-secondary btn-sm" onclick="adminEditUser('${u.id}')">Edit</button>
+                        ${u.role !== 'banned' ? `<button class="btn btn-danger btn-sm" onclick="adminBanUser('${u.id}')">Ban</button>` : `<button class="btn btn-green btn-sm" onclick="adminUnban('${u.id}')">Unban</button>`}
+                      </div>
+                    </td>
+                  </tr>`).join('')}
+              </tbody>
+            </table></div>
+          ` : ''}
+
+          ${tab === 'disputes' && currentUser.isAdmin ? `
+            ${disputes.length === 0 ? '<div class="empty-state"><span class="emoji">✅</span><h3>No Pending Disputes</h3></div>' :
+          disputes.map(d => `
+              <div class="card" style="margin-bottom:10px">
+                <div class="card-body">
+                  <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px">
+                    <div>
+                      <div style="font-weight:800;margin-bottom:4px">Reason: <span class="badge badge-red">${esc(d.reason)}</span></div>
+                      <div style="font-size:.82rem;color:var(--text-secondary)">"${esc(d.reasoning)}"</div>
+                      <div style="font-size:.7rem;color:var(--text-muted);margin-top:4px">By ${esc(d.submittedByName)} · ${timeAgo(d.timestamp)} · Match: ${d.matchId?.slice(0, 10)}…</div>
+                    </div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap">
+                      <button class="btn btn-secondary btn-sm" onclick="navigate('match-detail','${d.matchId}')">View Match</button>
+                      <button class="btn btn-green btn-sm" onclick="adminResolveDispute('${d.id}','match_stands')">Match Stands</button>
+                      <button class="btn btn-danger btn-sm" onclick="adminResolveDispute('${d.id}','reverse')">Reverse ELO</button>
+                      <button class="btn btn-danger btn-sm" onclick="adminResolveDispute('${d.id}','void')">Void Match</button>
+                    </div>
+                  </div>
+                </div>
+              </div>`).join('')}
+          ` : ''}
+
+          ${tab === 'integrity' && currentUser.isAdmin ? `
+            <div class="${violations.length > 0 ? 'integrity-banner integrity-warn' : 'integrity-banner integrity-ok'}">
+              ${violations.length > 0 ? `⚠ ${violations.length} integrity violation(s) detected` : '✓ All integrity checks passed'}
+            </div>
+            ${violations.length > 0 ? `<div class="card"><table class="admin-table">
+              <thead><tr><th>Type</th><th>Match</th><th>Reason</th><th>Time</th></tr></thead>
+              <tbody>
+                ${violations.map(v => `<tr>
+                  <td><span class="badge badge-red">${esc(v.type)}</span></td>
+                  <td style="font-family:var(--mono);font-size:.72rem">${(v.matchId || '').slice(0, 12)}…</td>
+                  <td>${esc(v.reason)}</td>
+                  <td style="color:var(--text-muted)">${timeAgo(v.reportedAt)}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table></div>` : ''}
+          ` : ''}
+
+          ${tab === 'partners' && currentUser.isAdmin ? `
+            ${partnerReqs.length === 0 ? '<div class="empty-state"><span class="emoji">🤝</span><h3>No Pending Partner Requests</h3></div>' :
+          partnerReqs.map(r => `
+              <div class="card" style="margin-bottom:10px">
+                <div class="card-body" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+                  <div>
+                    <div style="font-weight:800">${esc(r.fromName)} → ${esc(r.toName)}</div>
+                    <div style="font-size:.72rem;color:var(--text-muted)">${timeAgo(r.timestamp)}</div>
+                  </div>
+                  <div style="display:flex;gap:6px">
+                    <button class="btn btn-green btn-sm" onclick="approvePartner('${r.id}','${r.from}','${r.to}')">Approve</button>
+                    <button class="btn btn-danger btn-sm" onclick="denyPartner('${r.id}')">Deny</button>
+                  </div>
+                </div>
+              </div>`).join('')}
+          ` : ''}
+        </div>`;
+
+      c.querySelectorAll('.tab-bar button').forEach(b => { if (b.dataset.tab) b.onclick = () => render(b.dataset.tab); });
+    }
+    render(tab);
+  } catch (err) {
+    c.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${esc(err.message)}</p></div>`;
+  }
+}
+
+window.adminDeleteMatch = async (matchId) => {
+  if (!confirm('Delete this match? This will mark it hidden. ELO changes are NOT automatically reversed.')) return;
+  try {
+    await dbUpdate(`matches/${matchId}`, { hidden: true });
+    showToast('Match hidden', 'info'); renderAdmin();
+  } catch { showToast('Failed', 'error'); }
+};
+
+window.adminSetRole = async (uid, role) => {
+  try {
+    const updates = { role };
+    if (role === 'admin') { updates.isAdmin = true; updates.isTracker = true; }
+    else if (role === 'tracker') { updates.isAdmin = false; updates.isTracker = true; }
+    else { updates.isAdmin = false; updates.isTracker = false; }
+    await dbUpdate(`users/${uid}`, updates);
+    showToast('Role updated', 'success');
+  } catch { showToast('Failed', 'error'); }
+};
+
+window.adminBanUser = async (uid) => {
+  const reason = prompt('Ban reason:');
+  if (!reason) return;
+  try {
+    await dbUpdate(`users/${uid}`, { role: 'banned', banReason: reason });
+    showToast('User banned', 'warn'); renderAdmin();
+  } catch { showToast('Failed', 'error'); }
+};
+
+window.adminUnban = async (uid) => {
+  try { await dbUpdate(`users/${uid}`, { role: 'user', banReason: null }); showToast('User unbanned', 'success'); renderAdmin(); }
+  catch { showToast('Failed', 'error'); }
+};
+
+window.adminEditUser = (uid) => {
+  openModal('Edit User', `
+    <div class="form-group"><label>Display Name</label><input type="text" id="eu-name" placeholder="Name"></div>
+  `, `
+    <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+    <button class="btn btn-primary" id="eu-save">Save</button>
+  `);
+  document.getElementById('eu-save').onclick = async () => {
+    const name = document.getElementById('eu-name').value.trim();
+    if (!name) return;
+    try { await dbUpdate(`users/${uid}`, { name }); closeModal(); showToast('Name updated', 'success'); renderAdmin(); }
+    catch { showToast('Failed', 'error'); }
+  };
+};
+
+window.adminResolveDispute = async (disputeId, action) => {
+  const reason = prompt(`Action: ${action}\nProvide reasoning:`);
+  if (reason === null) return;
+  try {
+    await dbUpdate(`disputes/${disputeId}`, { status: action, resolvedBy: currentUser.id, resolvedAt: Date.now(), resolution: reason });
+    if (action === 'reverse') {
+      const d = await dbGet(`disputes/${disputeId}`);
+      if (d?.matchId) {
+        const match = await dbGet(`matches/${d.matchId}`);
+        if (match) {
+          // Invalidate ELO transactions for this match
+          const allParticipants = match.matchType === 'doubles' ? [...(match.team1 || []), ...(match.team2 || [])] : [match.player1, match.player2].filter(Boolean);
+          for (const uid of allParticipants) {
+            const txs = await dbGet(`eloLedger/${uid}`);
+            if (txs) {
+              for (const [txId, tx] of Object.entries(txs)) {
+                if (tx.matchId === d.matchId) {
+                  await dbUpdate(`eloLedger/${uid}/${txId}`, { valid: false, reversalReason: reason });
+                  // Recalculate elo from remaining valid transactions
+                  const newElo = await recalcEloFromLedger(uid);
+                  await dbUpdate(`players/${uid}`, { elo: newElo });
+                }
+              }
+            }
+          }
+          await dbUpdate(`matches/${d.matchId}`, { hidden: true });
+        }
+      }
+    }
+    if (action === 'void') {
+      const d = await dbGet(`disputes/${disputeId}`);
+      if (d?.matchId) await dbUpdate(`matches/${d.matchId}`, { status: 'voided', hidden: true });
+    }
+    showToast('Dispute resolved', 'success'); renderAdmin();
+  } catch (err) { showToast('Failed: ' + err.message, 'error'); }
+};
+
+window.approvePartner = async (reqId, p1Id, p2Id) => {
+  try {
+    await dbUpdate(`partnerRequests/${reqId}`, { status: 'approved' });
+    await dbPush('doublesPairs', { player1: p1Id, player2: p2Id, wins: 0, losses: 0, createdAt: Date.now() });
+    showToast('Partner pair created!', 'success'); renderAdmin();
+  } catch { showToast('Failed', 'error'); }
+};
+
+window.denyPartner = async (reqId) => {
+  try { await dbUpdate(`partnerRequests/${reqId}`, { status: 'denied' }); showToast('Request denied', 'info'); renderAdmin(); }
+  catch { showToast('Failed', 'error'); }
+};
+
+// ===================== CLICK DELEGATION for profile navigation =====================
+document.getElementById('page-content').addEventListener('click', e => {
+  const profileLink = e.target.closest('[data-profile-id]');
+  if (profileLink) navigate('profile', profileLink.dataset.profileId);
+});
+
+// ===================== START =====================
+window.navigate = navigate;
+window.showDisputeModal = showDisputeModal;
+window.showNewMatchModal = showNewMatchModal;
+window.showRequestPartnerModal = showRequestPartnerModal;
+window.showEditProfile = showEditProfile;
+window.renderAdmin = renderAdmin;
+
+init();
+</script>
+</body>
+</html>

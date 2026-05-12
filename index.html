@@ -9,6 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>(function(){ emailjs.init("gWgHwkPBzHaIeiuRW"); })();</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏐</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -270,9 +271,9 @@ main{flex:1;max-width:1400px;margin:0 auto;padding:24px 20px;width:100%}
 .player-select-card{padding:12px 16px;border-radius:8px;border:1px solid var(--border);background:var(--bg-surface);cursor:pointer;transition:all .15s;margin-bottom:8px;display:flex;align-items:center;gap:10px}
 .player-select-card:hover,.player-select-card.selected{border-color:rgba(245,200,0,0.4);background:var(--yellow-dim)}
 .player-select-card .player-elo-badge{font-family:var(--display);font-size:1.1rem;color:var(--yellow);margin-left:auto}
-.score-option{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:8px;border:1px solid var(--border);background:var(--bg-surface);font-family:var(--display);font-size:1.4rem;cursor:pointer;transition:all .15s}
+.score-option{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;border-radius:8px;border:1px solid var(--border);background:var(--bg-surface);font-family:var(--display);font-size:1.4rem;cursor:pointer;transition:all .15s;color:var(--text)}
 .score-option:hover,.score-option.selected{border-color:var(--yellow);background:var(--yellow-dim);color:var(--yellow)}
-
+  
 /* ===== ELO ANIMATION ===== */
 .elo-popup-container{position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:9998;pointer-events:none;display:flex;flex-direction:column;gap:8px;align-items:center}
 .elo-popup{font-family:var(--display);font-size:1.8rem;letter-spacing:.06em;padding:8px 24px;border-radius:8px;animation:eloFloat 2.5s ease forwards}
@@ -1133,16 +1134,16 @@ async function showNewMatchModal() {
         <div class="form-group">
           <label>Match Type</label>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px">
-            <button class="score-option ${matchConfig.matchType==='singles'?'selected':''}" style="width:100%;height:52px;font-family:var(--font);font-size:.85rem;font-weight:800" onclick="setMatchProp('matchType','singles')">Singles</button>
-            <button class="score-option ${matchConfig.matchType==='doubles'?'selected':''}" style="width:100%;height:52px;font-family:var(--font);font-size:.85rem;font-weight:800" onclick="setMatchProp('matchType','doubles')">Doubles</button>
+            <button class="score-option ${matchConfig.matchType==='singles'?'selected':''}" style="width:100%;height:auto;padding:12px 8px;font-family:var(--font);font-size:.85rem;font-weight:800" onclick="setMatchProp('matchType','singles')">Singles</button>
+            <button class="score-option ${matchConfig.matchType==='doubles'?'selected':''}" style="width:100%;height:auto;padding:12px 8px;font-family:var(--font);font-size:.85rem;font-weight:800" onclick="setMatchProp('matchType','doubles')">Doubles</button>
           </div>
         </div>
         <div class="form-group">
           <label>Mode</label>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px">
-            <button class="score-option ${matchConfig.mode==='casual'?'selected':''}" style="width:100%;height:52px;font-family:var(--font);font-size:.8rem;font-weight:800" onclick="setMatchProp('mode','casual')">Casual<br><span style="font-size:.62rem;opacity:.6">50% ELO</span></button>
-            <button class="score-option ${matchConfig.mode==='competitive'?'selected':''}" style="width:100%;height:52px;font-family:var(--font);font-size:.8rem;font-weight:800" onclick="setMatchProp('mode','competitive')">Competitive<br><span style="font-size:.62rem;opacity:.6">100% ELO</span></button>
-            <button class="score-option ${matchConfig.mode==='tournament'?'selected':''}" style="width:100%;height:52px;font-family:var(--font);font-size:.8rem;font-weight:800" onclick="setMatchProp('mode','tournament')">Tournament<br><span style="font-size:.62rem;opacity:.6">125% ELO</span></button>
+            <button class="score-option ${matchConfig.mode==='casual'?'selected':''}" style="width:100%;height:auto;padding:10px 8px;font-family:var(--font);font-size:.8rem;font-weight:800" onclick="setMatchProp('mode','casual')">Casual<br><span style="font-size:.62rem;opacity:.6">50% ELO</span></button>
+            <button class="score-option ${matchConfig.mode==='competitive'?'selected':''}" style="width:100%;height:auto;padding:10px 8px;font-family:var(--font);font-size:.8rem;font-weight:800" onclick="setMatchProp('mode','competitive')">Competitive<br><span style="font-size:.62rem;opacity:.6">100% ELO</span></button>
+            <button class="score-option ${matchConfig.mode==='tournament'?'selected':''}" style="width:100%;height:auto;padding:10px 8px;font-family:var(--font);font-size:.8rem;font-weight:800" onclick="setMatchProp('mode','tournament')">Tournament<br><span style="font-size:.62rem;opacity:.6">125% ELO</span></button>
           </div>
         </div>
         <div class="form-group">

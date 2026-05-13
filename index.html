@@ -366,6 +366,7 @@ main{flex:1;max-width:1400px;margin:0 auto;padding:24px 20px;width:100%}
       <button data-page="leaderboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Ranks</button>
       <button data-page="profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Profile</button>
       <button data-page="rules"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Rules</button>
+      <button data-page="admin" id="mobile-admin-btn" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Admin</button>
     </div>
   </div>
 
@@ -475,7 +476,7 @@ async function hashMatch(data) {
 const ELO_BASE = 5.0;
 const ELO_MAX = 10.0;
 const ELO_MIN = 0.0;
-const PLACEMENT_GAMES = 5;
+const PLACEMENT_GAMES = 3;
 const HIGH_VOL_GAMES = 10;
 
 function computeEloFromLedger(transactions) {
@@ -667,6 +668,8 @@ async function init() {
     document.getElementById('mobile-nav').style.display = '';
     const adminBtn = document.getElementById('admin-nav-btn');
     if (adminBtn) adminBtn.style.display = (currentUser.isAdmin || currentUser.isTracker) ? '' : 'none';
+    const mobileAdminBtn = document.getElementById('mobile-admin-btn');
+    if (mobileAdminBtn) mobileAdminBtn.style.display = (currentUser.isAdmin || currentUser.isTracker) ? '' : 'none';
     updateHeaderElo();
     navigate('matches');
     setTimeout(checkPendingEloUpdates, 1500);
@@ -679,8 +682,10 @@ async function init() {
 }
 
 function updateHeaderElo() {
-  const elo = currentUser?.playerData?.elo;
-  document.getElementById('header-elo').textContent = elo !== undefined && elo !== null ? fmtElo(elo) : '—';
+  const p = currentUser?.playerData;
+  const inPlacement = !p || (p.gamesPlayed || 0) < PLACEMENT_GAMES;
+  const elo = p?.elo;
+  document.getElementById('header-elo').textContent = inPlacement ? '—' : (elo !== undefined && elo !== null ? fmtElo(elo) : '—');
 }
 
 // ===================== ROUTER =====================
@@ -1503,7 +1508,13 @@ async function renderLeaderboard() {
       if (tab === 'singles') {
         const list = Object.entries(players).map(([id, p]) => ({
           id, ...p, name: users[id]?.name || 'Unknown', pfp: users[id]?.pfp || null, role: users[id]?.role
-        })).filter(p => p.role !== 'banned' && (p.gamesPlayed || 0) > 0).sort((a, b) => (b.elo || ELO_BASE) - (a.elo || ELO_BASE));
+        })).filter(p => p.role !== 'banned' && (p.gamesPlayed || 0) > 0).sort((a, b) => {
+          const aPlacement = (a.phase || 'placement') === 'placement';
+          const bPlacement = (b.phase || 'placement') === 'placement';
+          if (aPlacement && !bPlacement) return 1;
+          if (!aPlacement && bPlacement) return -1;
+          return (b.elo || ELO_BASE) - (a.elo || ELO_BASE);
+        });
 
         html = list.length === 0 ? `<div class="empty-state"><span class="emoji">🏆</span><h3>No Players Yet</h3><p>Complete matches to appear on the leaderboard.</p></div>` :
           `<div class="card"><div style="padding:0">
@@ -1511,8 +1522,8 @@ async function renderLeaderboard() {
           const phase = p.phase || 'placement';
           const phaseBadge = phase === 'placement' ? `<span class="badge badge-yellow" style="font-size:.55rem">Placement ${Math.min(p.gamesPlayed || 0, PLACEMENT_GAMES)}/${PLACEMENT_GAMES}</span>` :
             phase === 'volatile' ? `<span class="badge badge-blue" style="font-size:.55rem">Rising</span>` : '';
-          const rankClass = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
-          const rankDisp = i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1;
+          const rankClass = phase === 'placement' ? '' : (i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '');
+          const rankDisp = phase === 'placement' ? '—' : (i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1);
           const wins = p.wins || 0; const losses = p.losses || 0;
           const wr = (wins + losses) > 0 ? Math.round(wins / (wins + losses) * 100) : 0;
           return `<div class="lb-row" onclick="navigate('profile','${p.id}')">
@@ -1524,7 +1535,7 @@ async function renderLeaderboard() {
                 </div>
                 <div class="lb-sub">${wins}W / ${losses}L · ${wr}% WR · ${p.gamesPlayed || 0} games</div>
               </div>
-              <div class="lb-elo">${fmtElo(p.elo || ELO_BASE)}</div>
+              <div class="lb-elo">${phase === 'placement' ? '—' : fmtElo(p.elo || ELO_BASE)}</div>
             </div>`;
         }).join('')}
           </div></div>`;
@@ -1649,7 +1660,7 @@ async function renderProfile(userId) {
               <div style="font-size:.72rem;color:var(--text-muted);margin-top:6px">${phaseLabel} · Joined ${new Date(user.createdAt || Date.now()).toLocaleDateString()}</div>
             </div>
             <div style="text-align:right">
-              <div style="font-family:var(--display);font-size:3rem;color:var(--yellow);letter-spacing:.04em;text-shadow:0 0 20px rgba(245,200,0,0.3)">${fmtElo(p.elo || ELO_BASE)}</div>
+              <div style="font-family:var(--display);font-size:3rem;color:var(--yellow);letter-spacing:.04em;text-shadow:0 0 20px rgba(245,200,0,0.3)">${phase === 'placement' ? '—' : fmtElo(p.elo || ELO_BASE)}</div>
               <div style="font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted)">ELO Rating</div>
               ${isOwnProfile ? `<button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="showEditProfile()">Edit Profile</button>` : ''}
             </div>

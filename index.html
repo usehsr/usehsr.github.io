@@ -322,6 +322,13 @@ main{flex:1;max-width:1400px;margin:0 auto;padding:24px 20px;width:100%}
 .intro-bar-fill{height:100%;width:0%;background:var(--yellow);border-radius:1px;animation:introBar .8s ease 1.3s forwards;box-shadow:0 0 12px var(--yellow)}
 @keyframes introBar{to{width:100%}}
 #intro-overlay.out{opacity:0;pointer-events:none}
+
+/* ===== BAN SCREEN ===== */
+.ban-screen{display:flex;height:100vh;background:var(--bg);color:var(--red);align-items:center;justify-content:center;flex-direction:column;gap:16px;text-align:center;position:fixed;inset:0;z-index:10000}
+.ban-screen .icon{font-size:5rem;margin-bottom:12px;text-shadow:0 0 40px rgba(255,53,32,0.6);animation:pulseRed 2s infinite}
+.ban-screen h1{font-family:var(--display);font-size:3.5rem;letter-spacing:.06em;color:var(--red)}
+.ban-screen p{color:#ff8888;max-width:500px;line-height:1.6;font-size:.95rem}
+@keyframes pulseRed{0%{transform:scale(1);opacity:1}50%{transform:scale(1.1);opacity:0.8}100%{transform:scale(1);opacity:1}}
 </style>
 </head>
 <body>
@@ -651,7 +658,7 @@ async function init() {
       saveSession(currentUser);
       if (currentUser.role === 'banned') {
         clearSession();
-        document.body.innerHTML = `<div style="display:flex;height:100vh;background:#000;color:red;align-items:center;justify-content:center;flex-direction:column;gap:16px"><h1 style="font-size:3rem">🚫</h1><h1 style="font-family:var(--display)">BANNED</h1><p style="color:#ff6666;text-align:center;max-width:400px">${esc(currentUser.banReason || 'You have been banned.')}</p></div>`;
+        renderBanScreen(currentUser.banReason);
         return;
       }
     } catch (e) { }
@@ -730,6 +737,24 @@ function renderAuth(mode = 'login') {
     document.getElementById('signup-form').onsubmit = doSignup;
     document.getElementById('go-login').onclick = e => { e.preventDefault(); renderAuth('login'); };
   }
+}
+
+// ===================== BAN SCREEN =====================
+function renderBanScreen(reason) {
+  document.body.innerHTML = `
+    <div class="ban-screen">
+      <div class="icon">🚫</div>
+      <h1>BANNED</h1>
+      <p>Your account has been suspended.</p>
+      ${reason ? `<p style="font-family:var(--mono);background:rgba(255,53,32,0.1);padding:10px 16px;border-radius:8px;border:1px solid rgba(255,53,32,0.3)">Reason: ${esc(reason)}</p>` : ''}
+      <p style="font-size:.8rem;color:var(--text-muted);margin-top:20px">Contact an administrator for assistance.</p>
+    </div>
+  `;
+  
+  // Clean up app state
+  document.getElementById('main-header').style.display = 'none';
+  document.getElementById('mobile-nav').style.display = 'none';
+  document.getElementById('page-content').innerHTML = '';
 }
 
 async function doLogin(e) {

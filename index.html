@@ -535,8 +535,18 @@ function getUnderdogFactor(winnerElo, loserElo) {
 // Doubles team strength: weighted average (55/45) toward the stronger player,
 // since the better player on a team has an outsized impact vs simple average.
 function calcTeamStrength(eloA, eloB) {
+  const gap = Math.abs(eloA - eloB);
+  // Piecewise carry curve:
+  //   gap=0   -> 50/50
+  //   gap=0.5 -> 60/40
+  //   gap=1   -> 65/35
+  //   gap=2+  -> 70/30 (cap)
+  let strongWeight;
+  if (gap < 0.5)       strongWeight = 0.50 + gap * 0.20;
+  else if (gap < 1.0)  strongWeight = 0.60 + (gap - 0.5) * 0.10;
+  else                 strongWeight = Math.min(0.70, 0.65 + (gap - 1.0) * 0.05);
   const [high, low] = eloA >= eloB ? [eloA, eloB] : [eloB, eloA];
-  return high * 0.55 + low * 0.45;
+  return high * strongWeight + low * (1 - strongWeight);
 }
 
 // Streak bonus removed — streaks are displayed on profiles but do not affect ELO.
@@ -593,20 +603,24 @@ function calcDoublesElo(team1Elos, team2Elos, winnerTeam, winnerScore, loserScor
 
   const deltas = {};
 
-  // Winners: weaker player gets a touch more (they took more risk relative to their rating)
+  // Winners: weaker player earns more — scale with actual partner gap, not a hardcoded weight
   const wAvg = (winnerElos[0] + winnerElos[1]) / 2;
+  const wGap = Math.abs(winnerElos[0] - winnerElos[1]);
+  const wCarryScale = Math.min(0.4, wGap * 0.1); // 0 at equal partners, up to 0.4 at gap>=4
   const wWeights = winnerElos.map(elo => {
     const rel = (elo - wAvg) / (Math.max(...winnerElos) - Math.min(...winnerElos) + 0.01);
-    return Math.max(0.7, 1.0 - rel * 0.2);
+    return Math.max(0.6, 1.0 - rel * wCarryScale);
   });
   const wWeightSum = wWeights.reduce((s, w) => s + w, 0);
   winnerElos.forEach((_, i) => { deltas[`w${i}`] = totalDelta * (wWeights[i] / wWeightSum); });
 
-  // Losers: stronger player on losing team loses slightly more
+  // Losers: stronger player loses more — scale with actual partner gap
   const lAvg = (loserElos[0] + loserElos[1]) / 2;
+  const lGap = Math.abs(loserElos[0] - loserElos[1]);
+  const lCarryScale = Math.min(0.3, lGap * 0.1); // 0 at equal partners, up to 0.3 at gap>=3
   const lWeights = loserElos.map(elo => {
     const rel = (elo - lAvg) / (Math.max(...loserElos) - Math.min(...loserElos) + 0.01);
-    return Math.max(0.7, 1.0 + rel * 0.1);
+    return Math.max(0.6, 1.0 + rel * lCarryScale);
   });
   const lWeightSum = lWeights.reduce((s, w) => s + w, 0);
   loserElos.forEach((_, i) => { deltas[`l${i}`] = -(totalDelta * (lWeights[i] / lWeightSum)); });

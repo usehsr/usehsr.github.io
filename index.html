@@ -285,10 +285,6 @@ main{flex:1;max-width:1400px;margin:0 auto;padding:24px 20px;width:100%}
 .chart-wrap{background:var(--bg-surface);border-radius:8px;padding:16px;border:1px solid var(--border);margin-bottom:16px}
 .chart-wrap canvas{max-height:220px}
 
-/* ===== INTEGRITY BANNER ===== */
-.integrity-banner{padding:12px 18px;border-radius:8px;font-size:.78rem;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:16px}
-.integrity-ok{background:var(--green-dim);color:var(--green);border:1px solid rgba(57,211,83,0.2)}
-.integrity-warn{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,53,32,0.2)}
 
 /* ===== RULES ===== */
 .rules-content{line-height:1.8;color:var(--text-secondary);font-size:.88rem}
@@ -464,14 +460,6 @@ document.querySelector('.mobile-nav-inner')?.addEventListener('click', e => { co
 document.getElementById('logout-btn').onclick = () => { clearSession(); init(); };
 document.getElementById('profile-btn').onclick = () => navigate('profile', currentUser?.id);
 
-// ===================== CRYPTO HASH =====================
-async function hashMatch(data) {
-  const str = JSON.stringify(data);
-  const enc = new TextEncoder().encode(str);
-  const buf = await crypto.subtle.digest('SHA-256', enc);
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
-}
-
 // ===================== ELO ENGINE =====================
 const ELO_BASE = 5.0;
 const ELO_MAX = 10.0;
@@ -491,27 +479,29 @@ function getPlayerPhase(gamesPlayed) {
 }
 
 // K-factor based on phase and elo (diminishing returns at high elo)
+// Reduced base values so the 0–10 scale is harder to climb
 function getKFactor(phase, currentElo) {
   let base;
-  if (phase === 'placement') base = 1.2;
-  else if (phase === 'volatile') base = 0.7;
-  else base = 0.35;
+  if (phase === 'placement') base = 0.6;
+  else if (phase === 'volatile') base = 0.3;
+  else base = 0.15;
   // Diminishing returns at higher elos
   const diminish = Math.max(0.3, 1 - Math.pow(Math.max(0, currentElo - 6) / 6, 1.5) * 0.7);
   return base * diminish;
 }
 
 // Expected win probability using logistic function
+// Divisor = ~20% of ELO range (0-10 scale → 2.0) so a 2-point gap ≈ 73% win probability
 function expectedScore(eloA, eloB) {
-  return 1 / (1 + Math.pow(10, (eloB - eloA) / 2));
+  return 1 / (1 + Math.pow(10, (eloB - eloA) / 2.0));
 }
 
-// Score factor: blowout vs close game
+// Score factor: blowout vs close game — capped at 1.2 to prevent score-running
 function getScoreFactor(winnerScore, loserScore, maxScore) {
   const margin = winnerScore - loserScore;
   const normalized = margin / maxScore;
-  // 0.6 for very close, 1.4 for blowout
-  return 0.6 + normalized * 0.8;
+  // 0.6 for very close, 1.2 for blowout (was 1.4)
+  return 0.6 + normalized * 0.6;
 }
 
 // Type multiplier
@@ -521,12 +511,9 @@ function getTypeMultiplier(type) {
   return 1.0; // competitive
 }
 
-// Streak bonus (capped at 25% after 10 streak)
-function getStreakBonus(streak) {
-  if (!streak || streak < 2) return 1.0;
-  const s = Math.min(streak, 10);
-  return 1.0 + (s / 10) * 0.25;
-}
+// Streak bonus removed — streaks are shown on profiles for info but do not affect ELO.
+// ELO already captures relative strength; rewarding hot streaks would double-count momentum.
+function getStreakBonus(_streak) { return 1.0; }
 
 // Singles ELO calculation
 function calcSinglesElo(winnerElo, loserElo, winnerScore, loserScore, maxScore, type, winnerPhase, loserPhase, winnerStreak) {
@@ -601,7 +588,7 @@ async function getPlayerData(userId) {
   try { return await dbGet(`players/${userId}`); } catch { return null; }
 }
 
-// Recalculate elo from ledger (for integrity check)
+// Recalculate elo from ledger
 async function recalcEloFromLedger(userId) {
   try {
     const txs = await dbGet(`eloLedger/${userId}`);
@@ -620,12 +607,6 @@ async function applyEloTransaction(userId, matchId, delta, reason = '') {
   await dbPush(`eloLedger/${userId}`, tx);
   await dbUpdate(`players/${userId}`, { elo: after });
   return { before, after, delta: actualDelta };
-}
-
-// ===================== MATCH INTEGRITY HASH =====================
-async function buildMatchHash(matchData, previousHash) {
-  const payload = { matchId: matchData.id || matchData.matchId, timestamp: matchData.timestamp, players: matchData.players, score: matchData.score, eloDeltas: matchData.eloDeltas, previousHash };
-  return await hashMatch(payload);
 }
 
 // ===================== PENDING ELO (offline) =====================
@@ -673,7 +654,6 @@ async function init() {
     updateHeaderElo();
     navigate('matches');
     setTimeout(checkPendingEloUpdates, 1500);
-    setTimeout(runIntegrityCheck, 3000);
   } else {
     document.getElementById('main-header').style.display = 'none';
     document.getElementById('mobile-nav').style.display = 'none';
@@ -1008,10 +988,10 @@ async function renderMatchDetail(matchId) {
         <span class="play-score">${p.score1}—${p.score2}</span>
       </div>`).join('') : '<p style="color:var(--text-muted);font-size:.8rem;padding:12px">No play-by-play data</p>';
 
-    const canDispute = currentUser && !match.disputed && match.status === 'completed' && (
-      match.player1 === currentUser.id || match.player2 === currentUser.id ||
-      (match.team1 || []).includes(currentUser.id) || (match.team2 || []).includes(currentUser.id)
-    );
+    const isParticipant = match.player1 === currentUser.id || match.player2 === currentUser.id ||
+      (match.team1 || []).includes(currentUser.id) || (match.team2 || []).includes(currentUser.id);
+    const isTracker = match.trackerId === currentUser.id;
+    const canDispute = currentUser && !match.disputed && match.status === 'completed' && isParticipant && !isTracker;
 
     c.innerHTML = `
       <div class="page">
@@ -1036,7 +1016,6 @@ async function renderMatchDetail(matchId) {
                 </div>
                 <div style="font-size:.73rem;color:var(--text-muted)">
                   Tracked by <strong style="color:var(--text)">${esc(match.trackerName || 'Unknown')}</strong> · ${new Date(match.timestamp).toLocaleString()}
-                  ${match.hash ? `<br><span style="font-family:var(--mono)">Hash: ${esc(match.hash)}</span>` : ''}
                 </div>
               </div>
             </div>
@@ -1057,17 +1036,7 @@ async function renderMatchDetail(matchId) {
                 ${renderEloDeltaPanel(match, users)}
               </div>
             </div>
-            ${match.hash ? `
-            <div class="card" style="margin-bottom:16px">
-              <div class="card-header"><span class="card-header-title">Integrity</span></div>
-              <div class="card-body">
-                <div style="font-size:.72rem;color:var(--text-muted)">
-                  <div style="margin-bottom:6px">Match ID: <span style="font-family:var(--mono);color:var(--text)">${matchId.slice(0,12)}…</span></div>
-                  <div style="margin-bottom:6px">Hash: <span style="font-family:var(--mono);color:var(--yellow)">${esc(match.hash)}</span></div>
-                  ${match.previousHash ? `<div>Prev: <span style="font-family:var(--mono)">${esc(match.previousHash)}</span></div>` : ''}
-                </div>
-              </div>
-            </div>` : ''}
+
           </div>
         </div>
       </div>`;
@@ -1101,13 +1070,19 @@ function renderEloDeltaPanel(match, users) {
   } else {
     const all = [...(match.team1 || []), ...(match.team2 || [])];
     return all.map((id, i) => {
-      const u = users[id]; const delta = match.eloDeltas?.[id] || 0; const before = match.elosBefore?.[id] || ELO_BASE;
+      const u = users[id];
+      const delta = match.eloDeltas?.[id] || 0;
+      const before = match.elosBefore?.[id] ?? ELO_BASE;
+      const after = match.elosAfter?.[id] ?? (before + delta);
       return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg-surface);border-radius:8px;border:1px solid var(--border);margin-bottom:6px">
         <div style="display:flex;align-items:center;gap:6px">
           <span class="badge ${i < 2 ? 'badge-yellow' : 'badge-blue'}">${i < 2 ? 'T1' : 'T2'}</span>
           <span style="font-weight:700">${esc(u?.name || 'Player')}</span>
         </div>
-        <div class="${delta >= 0 ? 'elo-delta-pos' : 'elo-delta-neg'}">${delta >= 0 ? '+' : ''}${delta.toFixed(2)}</div>
+        <div style="text-align:right">
+          <div style="font-family:var(--mono);font-size:.75rem;color:var(--text-muted)">${fmtElo(before)} → ${fmtElo(after)}</div>
+          <div class="${delta >= 0 ? 'elo-delta-pos' : 'elo-delta-neg'}">${delta >= 0 ? '+' : ''}${delta.toFixed(2)}</div>
+        </div>
       </div>`;
     }).join('');
   }
@@ -1150,7 +1125,7 @@ async function showNewMatchModal() {
   const users = usersData ? Object.entries(usersData).map(([id, u]) => ({ id, ...u })).filter(u => u.verified && u.role !== 'banned') : [];
 
   let step = 1;
-  let matchConfig = { matchType: 'singles', mode: 'competitive', winTo: 21, player1: null, player2: null, team1: [], team2: [] };
+  let matchConfig = { matchType: 'singles', mode: 'casual', winTo: 11, player1: null, player2: null, team1: [], team2: [] };
   let matchState = null; // active match state
 
   function getPlayerEloSync(uid) {
@@ -1348,7 +1323,9 @@ async function showNewMatchModal() {
   };
   window.wizardBack = () => { step = Math.max(1, step - 1); updateModalStep(); };
 
+  let matchSubmitting = false;
   async function resolveMatch(usersById, loadedPlayers) {
+    if (matchSubmitting) { showToast('Already submitting, please wait…', 'warn'); return; }
     const score1 = parseInt(document.getElementById('final-score1')?.value) || 0;
     const score2 = parseInt(document.getElementById('final-score2')?.value) || 0;
     if (score1 === score2) { showToast('Scores cannot be equal', 'error'); return; }
@@ -1364,6 +1341,7 @@ async function showNewMatchModal() {
 
     const btn = document.getElementById('resolve-match-btn');
     btn.disabled = true; btn.textContent = 'Processing…';
+    matchSubmitting = true;
 
     try {
       let eloDeltas = {}; let elosBefore = {}; let elosAfter = {};
@@ -1418,20 +1396,13 @@ async function showNewMatchModal() {
       const allParticipantIds = isDoubles ? [...matchConfig.team1, ...matchConfig.team2] : [matchConfig.player1, matchConfig.player2];
       const avgElo = allParticipantIds.reduce((s, id) => s + (elosBefore[id] || ELO_BASE), 0) / allParticipantIds.length;
 
-      // Get last match hash for chain
-      let previousHash = '';
-      try {
-        const lastMatch = await dbGet('lastMatchHash');
-        previousHash = lastMatch || '';
-      } catch { }
-
       // Build match object
       const matchId = genId();
       const matchObj = {
         id: matchId, matchType: matchConfig.matchType, mode: matchConfig.mode, winTo: matchConfig.winTo,
         score1, score2, winner, avgElo, timestamp: Date.now(), status: 'completed',
         trackerId: currentUser.id, trackerName: currentUser.name,
-        eloDeltas, elosBefore, elosAfter, previousHash, playByPlay: [], hidden: false
+        eloDeltas, elosBefore, elosAfter, playByPlay: [], hidden: false
       };
       if (!isDoubles) {
         matchObj.player1 = matchConfig.player1; matchObj.player2 = matchConfig.player2;
@@ -1441,12 +1412,8 @@ async function showNewMatchModal() {
         matchObj.team1 = matchConfig.team1; matchObj.team2 = matchConfig.team2;
       }
 
-      // Generate match hash
-      matchObj.hash = await buildMatchHash(matchObj, previousHash);
-
       // Save match
       await dbSet(`matches/${matchId}`, matchObj);
-      await dbSet('lastMatchHash', matchObj.hash);
 
       // Apply elo transactions and update player stats
       for (const id of allParticipantIds) {
@@ -1454,7 +1421,6 @@ async function showNewMatchModal() {
         await applyEloTransaction(id, matchId, delta, `Match ${matchId}`);
         const pdata = await getPlayerData(id);
         const won = isDoubles ? (winner === 1 ? matchConfig.team1.includes(id) : matchConfig.team2.includes(id)) : (winner === 1 ? id === matchConfig.player1 : id === matchConfig.player2);
-        const isCompStreak = matchConfig.mode !== 'casual';
         const compStreakEligible = matchConfig.mode !== 'casual';
         const updates = {
           elo: elosAfter[id],
@@ -1485,6 +1451,7 @@ async function showNewMatchModal() {
     } catch (err) {
       showToast('Failed to save match: ' + err.message, 'error');
       btn.disabled = false; btn.textContent = 'Resolve & Submit';
+      matchSubmitting = false;
     }
   }
 
@@ -1495,37 +1462,74 @@ async function showNewMatchModal() {
 async function renderLeaderboard() {
   const c = document.getElementById('page-content');
   try {
-    const [playersData, usersData, doublesData] = await Promise.all([dbGet('players'), dbGet('users'), dbGet('doublesPairs')]);
+    const [playersData, usersData, doublesData, matchesData] = await Promise.all([dbGet('players'), dbGet('users'), dbGet('doublesPairs'), dbGet('matches')]);
     const users = usersData || {};
     const players = playersData || {};
+    const allMatches = matchesData ? Object.entries(matchesData).map(([id, m]) => ({ id, ...m })) : [];
 
     let activeTab = 'singles';
+    let timeFilter = 'all'; // 'all', '30d', '7d'
+
+    function getFilteredElo(uid) {
+      if (timeFilter === 'all') return players[uid]?.elo ?? ELO_BASE;
+      const cutoff = timeFilter === '7d' ? Date.now() - 7 * 86400000 : Date.now() - 30 * 86400000;
+      // Find the player's ELO just before the cutoff, then replay deltas since then
+      // For simplicity: compute wins/losses in window and show relative rank by recent W/L if no ledger
+      // We use match history to compute window ELO delta and add to baseline
+      const windowMatches = allMatches.filter(m => m.status === 'completed' && !m.hidden && m.timestamp >= cutoff && (
+        m.player1 === uid || m.player2 === uid || (m.team1||[]).includes(uid) || (m.team2||[]).includes(uid)
+      ));
+      const delta = windowMatches.reduce((sum, m) => {
+        const d = m.eloDeltas?.[uid] ?? (m.player1===uid ? (m.p1EloAfter??0)-(m.p1EloBefore??0) : m.player2===uid ? (m.p2EloAfter??0)-(m.p2EloBefore??0) : 0);
+        return sum + d;
+      }, 0);
+      return delta; // return net delta for window sorting
+    }
 
     function render(tab) {
       activeTab = tab;
       let html = '';
+      const timeFilterHtml = `
+        <div style="display:flex;gap:6px;margin-bottom:14px;align-items:center">
+          <span style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted)">Period:</span>
+          ${[['all','All Time'],['30d','Last 30 Days'],['7d','Last 7 Days']].map(([v,l]) =>
+            `<button class="filter-pill ${timeFilter===v?'active':''}" onclick="setLbTimeFilter('${v}')">${l}</button>`
+          ).join('')}
+        </div>`;
 
       if (tab === 'singles') {
         const list = Object.entries(players).map(([id, p]) => ({
-          id, ...p, name: users[id]?.name || 'Unknown', pfp: users[id]?.pfp || null, role: users[id]?.role
-        })).filter(p => p.role !== 'banned' && (p.gamesPlayed || 0) > 0).sort((a, b) => {
-          const aPlacement = (a.phase || 'placement') === 'placement';
-          const bPlacement = (b.phase || 'placement') === 'placement';
-          if (aPlacement && !bPlacement) return 1;
-          if (!aPlacement && bPlacement) return -1;
-          return (b.elo || ELO_BASE) - (a.elo || ELO_BASE);
+          id, ...p, name: users[id]?.name || 'Unknown', pfp: users[id]?.pfp || null, role: users[id]?.role,
+          sortElo: timeFilter === 'all' ? (p.elo || ELO_BASE) : getFilteredElo(id)
+        })).filter(p => {
+          if (p.role === 'banned' || (p.gamesPlayed || 0) === 0) return false;
+          // Always exclude placement players from time-filtered views
+          if (timeFilter !== 'all' && (p.phase || 'placement') === 'placement') return false;
+          return true;
+        }).sort((a, b) => {
+          if (timeFilter === 'all') {
+            const aPlacement = (a.phase || 'placement') === 'placement';
+            const bPlacement = (b.phase || 'placement') === 'placement';
+            if (aPlacement && !bPlacement) return 1;
+            if (!aPlacement && bPlacement) return -1;
+          }
+          return b.sortElo - a.sortElo;
         });
+
+        const periodLabel = timeFilter === '7d' ? 'ELO Δ (7d)' : timeFilter === '30d' ? 'ELO Δ (30d)' : 'ELO';
 
         html = list.length === 0 ? `<div class="empty-state"><span class="emoji">🏆</span><h3>No Players Yet</h3><p>Complete matches to appear on the leaderboard.</p></div>` :
           `<div class="card"><div style="padding:0">
             ${list.map((p, i) => {
           const phase = p.phase || 'placement';
-          const phaseBadge = phase === 'placement' ? `<span class="badge badge-yellow" style="font-size:.55rem">Placement ${Math.min(p.gamesPlayed || 0, PLACEMENT_GAMES)}/${PLACEMENT_GAMES}</span>` :
-            phase === 'volatile' ? `<span class="badge badge-blue" style="font-size:.55rem">Rising</span>` : '';
-          const rankClass = phase === 'placement' ? '' : (i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '');
-          const rankDisp = phase === 'placement' ? '—' : (i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1);
+          const phaseBadge = (phase === 'placement' && timeFilter === 'all') ? `<span class="badge badge-yellow" style="font-size:.55rem">Placement ${Math.min(p.gamesPlayed || 0, PLACEMENT_GAMES)}/${PLACEMENT_GAMES}</span>` :
+            (phase === 'volatile' && timeFilter === 'all') ? `<span class="badge badge-blue" style="font-size:.55rem">Rising</span>` : '';
+          const rankClass = phase === 'placement' && timeFilter === 'all' ? '' : (i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '');
+          const rankDisp = phase === 'placement' && timeFilter === 'all' ? '—' : (i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1);
           const wins = p.wins || 0; const losses = p.losses || 0;
           const wr = (wins + losses) > 0 ? Math.round(wins / (wins + losses) * 100) : 0;
+          const displayElo = timeFilter === 'all' ? (phase === 'placement' ? '—' : fmtElo(p.elo || ELO_BASE)) :
+            ((p.sortElo >= 0 ? '+' : '') + fmtElo(p.sortElo));
           return `<div class="lb-row" onclick="navigate('profile','${p.id}')">
               <div class="lb-rank ${rankClass}">${rankDisp}</div>
               ${p.pfp ? `<img src="${esc(p.pfp)}" class="lb-avatar" onerror="this.style.display='none'">` : `<div class="lb-avatar-init" style="background:${avatarColor(p.name)}22;color:${avatarColor(p.name)}">${initials(p.name)}</div>`}
@@ -1535,7 +1539,7 @@ async function renderLeaderboard() {
                 </div>
                 <div class="lb-sub">${wins}W / ${losses}L · ${wr}% WR · ${p.gamesPlayed || 0} games</div>
               </div>
-              <div class="lb-elo">${phase === 'placement' ? '—' : fmtElo(p.elo || ELO_BASE)}</div>
+              <div class="lb-elo" style="${timeFilter !== 'all' ? `color:${p.sortElo >= 0 ? 'var(--green)' : 'var(--red)'}` : ''}">${displayElo}</div>
             </div>`;
         }).join('')}
           </div></div>`;
@@ -1579,10 +1583,14 @@ async function renderLeaderboard() {
             <button class="${tab === 'singles' ? 'active' : ''}" data-tab="singles">Singles</button>
             <button class="${tab === 'doubles' ? 'active' : ''}" data-tab="doubles">Doubles</button>
           </div>
+          ${tab === 'singles' ? timeFilterHtml : ''}
           ${html}
         </div>`;
       c.querySelectorAll('.tab-bar button').forEach(b => { if (b.dataset.tab) b.onclick = () => render(b.dataset.tab); });
+      c.querySelectorAll('.filter-pill[onclick]').forEach(b => { /* handled via onclick */ });
     }
+
+    window.setLbTimeFilter = (v) => { timeFilter = v; render(activeTab); };
     render(activeTab);
   } catch (err) {
     c.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${esc(err.message)}</p></div>`;
@@ -1618,8 +1626,8 @@ async function renderProfile(userId) {
   const uid = userId || currentUser?.id;
   if (!uid) { renderAuth(); return; }
   try {
-    const [user, player, matchesData, ledgerData] = await Promise.all([
-      dbGet(`users/${uid}`), dbGet(`players/${uid}`), dbGet('matches'), dbGet(`eloLedger/${uid}`)
+    const [user, player, matchesData, ledgerData, allUsersData, allPlayersData] = await Promise.all([
+      dbGet(`users/${uid}`), dbGet(`players/${uid}`), dbGet('matches'), dbGet(`eloLedger/${uid}`), dbGet('users'), dbGet('players')
     ]);
     if (!user) { c.innerHTML = '<div class="empty-state"><h3>Player not found</h3></div>'; return; }
 
@@ -1641,6 +1649,48 @@ async function renderProfile(userId) {
       return acc;
     }, [{ elo: ELO_BASE, date: 'Start' }]);
 
+    const allUsers = allUsersData || {};
+    const allPlayers = allPlayersData || {};
+
+    // Compute head-to-head records vs all opponents (singles and doubles)
+    function getH2H(mode) {
+      if (mode === 'singles') {
+        const records = {};
+        for (const m of playerMatches) {
+          if (m.matchType !== 'singles') continue;
+          const isP1 = m.player1 === uid;
+          const oppId = isP1 ? m.player2 : m.player1;
+          if (!oppId) continue;
+          const won = m.winner === 1 ? isP1 : !isP1;
+          if (!records[oppId]) records[oppId] = { wins: 0, losses: 0, name: allUsers[oppId]?.name || 'Unknown', matchType: 'singles' };
+          if (won) records[oppId].wins++; else records[oppId].losses++;
+        }
+        return Object.entries(records).sort((a, b) => (b[1].wins + b[1].losses) - (a[1].wins + a[1].losses));
+      } else {
+        // Doubles H2H: group by specific opponent team composition
+        const records = {};
+        for (const m of playerMatches) {
+          if (m.matchType !== 'doubles') continue;
+          const team1 = m.team1 || []; const team2 = m.team2 || [];
+          const myTeam = team1.includes(uid) ? team1 : team2;
+          const oppTeam = team1.includes(uid) ? team2 : team1;
+          const won = m.winner === (team1.includes(uid) ? 1 : 2);
+          // Key by sorted opponent IDs so order doesn't matter
+          const teamKey = [...myTeam].sort().join('_') + '|' + [...oppTeam].sort().join('_');
+          if (!records[teamKey]) {
+            records[teamKey] = {
+              wins: 0, losses: 0,
+              myTeamName: myTeam.map(id => allUsers[id]?.name || '?').join(' & '),
+              oppTeamName: oppTeam.map(id => allUsers[id]?.name || '?').join(' & '),
+              matchType: 'doubles'
+            };
+          }
+          if (won) records[teamKey].wins++; else records[teamKey].losses++;
+        }
+        return Object.entries(records).sort((a, b) => (b[1].wins + b[1].losses) - (a[1].wins + a[1].losses));
+      }
+    }
+
     let activeTab = 'stats';
 
     function render(tab) {
@@ -1654,7 +1704,6 @@ async function renderProfile(userId) {
               <div class="profile-name">
                 ${esc(user.name)}
                 ${p.compStreak >= 3 ? `<span class="streak-badge streak-comp">🔥 ${p.compStreak} Streak</span>` : ''}
-                ${p.casualStreak >= 3 ? `<span class="streak-badge streak-casual">🎮 ${p.casualStreak}</span>` : ''}
               </div>
               ${user.bio ? `<p class="profile-bio">${esc(user.bio)}</p>` : ''}
               <div style="font-size:.72rem;color:var(--text-muted);margin-top:6px">${phaseLabel} · Joined ${new Date(user.createdAt || Date.now()).toLocaleDateString()}</div>
@@ -1682,12 +1731,16 @@ async function renderProfile(userId) {
           <div class="tab-bar">
             <button class="${tab === 'stats' ? 'active' : ''}" data-tab="stats">Stats & Charts</button>
             <button class="${tab === 'matches' ? 'active' : ''}" data-tab="matches">Match History (${playerMatches.length})</button>
+            <button class="${tab === 'h2h' ? 'active' : ''}" data-tab="h2h">Head-to-Head</button>
+            <button class="${tab === 'predict' ? 'active' : ''}" data-tab="predict">Predict</button>
             <button class="${tab === 'ledger' ? 'active' : ''}" data-tab="ledger">ELO Ledger</button>
           </div>
 
           ${tab === 'stats' ? renderProfileStats(p, eloHistory, playerMatches) : ''}
-          ${tab === 'matches' ? renderProfileMatches(playerMatches, uid) : ''}
-          ${tab === 'ledger' ? renderProfileLedger(ledger) : ''}
+          ${tab === 'matches' ? `<div id="match-history-panel">${renderProfileMatches(playerMatches, uid, matchHistoryPage)}</div>` : ''}
+          ${tab === 'h2h' ? renderProfileH2H(getH2H('singles'), getH2H('doubles'), uid, p) : ''}
+          ${tab === 'predict' ? renderPredictTab(p, allUsers, allPlayers, user) : ''}
+          ${tab === 'ledger' ? `<div id="ledger-panel">${renderProfileLedger(ledger, ledgerPage)}</div>` : ''}
         </div>`;
 
       c.querySelectorAll('.tab-bar button').forEach(b => { if (b.dataset.tab) b.onclick = () => render(b.dataset.tab); });
@@ -1696,7 +1749,19 @@ async function renderProfile(userId) {
       if (tab === 'stats' && eloHistory.length > 1) {
         setTimeout(() => drawEloChart(eloHistory), 100);
       }
+      // Bind predict tab interactive logic
+      if (tab === 'predict') {
+        setTimeout(() => bindPredictTab(p, allUsers, allPlayers), 50);
+      }
     }
+    // Cache for pagination helpers
+    _profileMatchesCache = playerMatches;
+    _profileLedgerCache = ledger;
+    _profileUidCache = uid;
+    // Reset page on fresh profile load
+    matchHistoryPage = 1;
+    ledgerPage = 1;
+
     render(activeTab);
   } catch (err) {
     c.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${esc(err.message)}</p></div>`;
@@ -1750,38 +1815,60 @@ function drawEloChart(history) {
   });
 }
 
-function renderProfileMatches(matches, uid) {
-  if (matches.length === 0) return `<div class="empty-state"><span class="emoji">🏐</span><h3>No Matches Yet</h3></div>`;
+function renderMatchRow(m, uid) {
+  const isDoubles = m.matchType === 'doubles';
+  const won = isDoubles ? (m.winner === 1 ? (m.team1 || []).includes(uid) : (m.team2 || []).includes(uid)) : (m.winner === 1 ? m.player1 === uid : m.player2 === uid);
+  const delta = m.eloDeltas?.[uid] ?? (m.player1 === uid && m.p1EloAfter != null && m.p1EloBefore != null ? m.p1EloAfter - m.p1EloBefore : m.player2 === uid && m.p2EloAfter != null && m.p2EloBefore != null ? m.p2EloAfter - m.p2EloBefore : 0);
+  const modeColor = m.mode === 'tournament' ? 'var(--orange)' : m.mode === 'competitive' ? 'var(--yellow)' : 'var(--text-muted)';
   return `
-    <div class="card">
-      <div style="padding:0">
-        ${matches.slice(0, 30).map(m => {
-    const isDoubles = m.matchType === 'doubles';
-    const won = isDoubles ? (m.winner === 1 ? (m.team1 || []).includes(uid) : (m.team2 || []).includes(uid)) : (m.winner === 1 ? m.player1 === uid : m.player2 === uid);
-    const delta = m.eloDeltas?.[uid] || (m.player1 === uid ? (m.p1EloAfter - m.p1EloBefore) : (m.p2EloAfter - m.p2EloBefore)) || 0;
-    const modeColor = m.mode === 'tournament' ? 'var(--orange)' : m.mode === 'competitive' ? 'var(--yellow)' : 'var(--text-muted)';
-    return `
-          <div class="lb-row" onclick="navigate('match-detail','${m.id}')">
-            <div style="width:36px;text-align:center;font-size:1.2rem">${won ? '🏆' : '💀'}</div>
-            <div class="lb-info">
-              <div class="lb-name" style="font-size:.8rem">${m.score1}—${m.score2} · <span style="color:${modeColor}">${m.mode}</span> ${m.matchType}</div>
-              <div class="lb-sub">${timeAgo(m.timestamp)}</div>
-            </div>
-            <div class="${delta >= 0 ? 'elo-delta-pos' : 'elo-delta-neg'}">${delta >= 0 ? '+' : ''}${delta.toFixed(2)}</div>
-          </div>`;
-  }).join('')}
+    <div class="lb-row" onclick="navigate('match-detail','${m.id}')">
+      <div style="width:36px;text-align:center;font-size:1.2rem">${won ? '🏆' : '💀'}</div>
+      <div class="lb-info">
+        <div class="lb-name" style="font-size:.8rem">${m.score1}—${m.score2} · <span style="color:${modeColor}">${m.mode}</span> ${m.matchType}</div>
+        <div class="lb-sub">${timeAgo(m.timestamp)}</div>
       </div>
+      <div class="${delta >= 0 ? 'elo-delta-pos' : 'elo-delta-neg'}">${delta >= 0 ? '+' : ''}${delta.toFixed(2)}</div>
     </div>`;
 }
 
-function renderProfileLedger(ledger) {
+const MATCH_PAGE_SIZE = 20;
+let matchHistoryPage = 1;
+
+function renderProfileMatches(matches, uid, page) {
+  page = page || 1;
+  matchHistoryPage = page;
+  if (matches.length === 0) return `<div class="empty-state"><span class="emoji">🏐</span><h3>No Matches Yet</h3></div>`;
+  const totalPages = Math.ceil(matches.length / MATCH_PAGE_SIZE);
+  const paginated = matches.slice((page - 1) * MATCH_PAGE_SIZE, page * MATCH_PAGE_SIZE);
+  return `
+    <div class="card">
+      <div style="padding:0">
+        ${paginated.map(m => renderMatchRow(m, uid)).join('')}
+      </div>
+      ${totalPages > 1 ? `
+      <div style="padding:12px 20px;display:flex;align-items:center;justify-content:center;gap:8px;border-top:1px solid var(--border)">
+        <button class="btn btn-secondary btn-sm" ${page <= 1 ? 'disabled' : ''} onclick="profileMatchPage(${page - 1})">← Prev</button>
+        <span style="font-size:.72rem;color:var(--text-muted)">${page} / ${totalPages}</span>
+        <button class="btn btn-secondary btn-sm" ${page >= totalPages ? 'disabled' : ''} onclick="profileMatchPage(${page + 1})">Next →</button>
+      </div>` : ''}
+    </div>`;
+}
+
+const LEDGER_PAGE_SIZE = 25;
+let ledgerPage = 1;
+
+function renderProfileLedger(ledger, page) {
+  page = page || 1;
+  ledgerPage = page;
   if (ledger.length === 0) return `<div class="empty-state"><h3>No ELO History</h3></div>`;
+  const totalPages = Math.ceil(ledger.length / LEDGER_PAGE_SIZE);
+  const paginated = ledger.slice((page - 1) * LEDGER_PAGE_SIZE, page * LEDGER_PAGE_SIZE);
   return `
     <div class="card">
       <table class="admin-table">
         <thead><tr><th>Match ID</th><th>Before</th><th>After</th><th>Delta</th><th>Valid</th><th>Time</th></tr></thead>
         <tbody>
-          ${ledger.slice(0, 50).map(t => `
+          ${paginated.map(t => `
             <tr>
               <td style="font-family:var(--mono);font-size:.7rem;color:var(--text-muted)">${(t.matchId || '').slice(0, 10)}…</td>
               <td style="font-family:var(--mono)">${fmtElo(t.before)}</td>
@@ -1792,7 +1879,141 @@ function renderProfileLedger(ledger) {
             </tr>`).join('')}
         </tbody>
       </table>
+      ${totalPages > 1 ? `
+      <div style="padding:12px 20px;display:flex;align-items:center;justify-content:center;gap:8px;border-top:1px solid var(--border)">
+        <button class="btn btn-secondary btn-sm" ${page <= 1 ? 'disabled' : ''} onclick="ledgerPageNav(${page - 1})">← Prev</button>
+        <span style="font-size:.72rem;color:var(--text-muted)">${page} / ${totalPages}</span>
+        <button class="btn btn-secondary btn-sm" ${page >= totalPages ? 'disabled' : ''} onclick="ledgerPageNav(${page + 1})">Next →</button>
+      </div>` : ''}
     </div>`;
+}
+
+function renderH2HRow(key, rec, clickable, clickId) {
+  const total = rec.wins + rec.losses;
+  const wr = Math.round(rec.wins / total * 100);
+  const label = rec.name || rec.oppTeamName || key;
+  const subLabel = rec.myTeamName ? `With: ${esc(rec.myTeamName)}` : '';
+  return `<div class="lb-row" ${clickable ? `onclick="navigate('profile','${clickId}')" style="cursor:pointer"` : 'style="cursor:default"'}>
+    <div style="width:36px;text-align:center;font-size:1rem">${wr >= 60 ? '🟢' : wr <= 40 ? '🔴' : '🟡'}</div>
+    <div class="lb-info">
+      <div class="lb-name" style="font-size:.85rem">${esc(label)}</div>
+      ${subLabel ? `<div style="font-size:.65rem;color:var(--text-muted);margin-top:2px">${subLabel}</div>` : ''}
+      <div style="margin-top:5px;height:4px;background:var(--bg-surface);border-radius:2px;overflow:hidden">
+        <div style="height:100%;width:${wr}%;background:${wr >= 60 ? 'var(--green)' : wr <= 40 ? 'var(--red)' : 'var(--yellow)'};border-radius:2px;transition:width .3s"></div>
+      </div>
+    </div>
+    <div style="text-align:right;min-width:80px">
+      <div style="font-family:var(--display);font-size:1.2rem;color:${wr >= 60 ? 'var(--green)' : wr <= 40 ? 'var(--red)' : 'var(--yellow)'}">${rec.wins}–${rec.losses}</div>
+      <div style="font-size:.65rem;color:var(--text-muted)">${wr}% WR</div>
+    </div>
+  </div>`;
+}
+
+let h2hActiveTab = 'singles';
+
+function renderProfileH2H(singlesH2H, doublesH2H, uid, p) {
+  const hasSingles = singlesH2H.length > 0;
+  const hasDoubles = doublesH2H.length > 0;
+  if (!hasSingles && !hasDoubles) return `<div class="empty-state"><span class="emoji">⚔️</span><h3>No Head-to-Head Yet</h3><p>Records appear after competitive matches.</p></div>`;
+
+  const activeH2H = h2hActiveTab === 'singles' ? singlesH2H : doublesH2H;
+
+  return `
+    <div class="tab-bar" style="margin-bottom:12px">
+      <button class="${h2hActiveTab==='singles'?'active':''}" onclick="h2hActiveTab='singles';rerenderH2H()">Singles</button>
+      <button class="${h2hActiveTab==='doubles'?'active':''}" onclick="h2hActiveTab='doubles';rerenderH2H()">Doubles</button>
+    </div>
+    <div id="h2h-panel">
+    <div class="card">
+      <div class="card-header"><span class="card-header-title">Head-to-Head · ${h2hActiveTab === 'singles' ? 'Singles' : 'Doubles (by team)'}</span></div>
+      <div style="padding:0">
+        ${activeH2H.length === 0 ? `<div style="padding:24px;text-align:center;color:var(--text-muted);font-size:.84rem">No ${h2hActiveTab} head-to-head records yet.</div>` :
+          activeH2H.map(([key, rec]) => renderH2HRow(key, rec, h2hActiveTab === 'singles', key)).join('')}
+      </div>
+    </div>
+    </div>`;
+}
+
+function renderPredictTab(p, allUsers, allPlayers, user) {
+  const phase = p.phase || 'placement';
+  const myElo = phase !== 'placement' ? (p.elo || ELO_BASE) : null;
+  const opponents = Object.entries(allPlayers).filter(([id]) => id !== currentUser?.id && allPlayers[id]?.phase !== 'placement').map(([id, pl]) => ({
+    id, name: allUsers[id]?.name || 'Unknown', elo: pl.elo || ELO_BASE
+  })).sort((a, b) => a.name.localeCompare(b.name));
+
+  return `
+    <div class="card">
+      <div class="card-header"><span class="card-header-title">⚡ Match Predictor</span></div>
+      <div class="card-body">
+        <p style="font-size:.82rem;color:var(--text-secondary);margin-bottom:16px">See the expected win probability for any hypothetical matchup.</p>
+        <div class="form-row" style="margin-bottom:14px">
+          <div class="form-group" style="margin:0">
+            <label>Player A — ${esc(user?.name || 'You')}</label>
+            <input type="number" id="pred-elo-a" step="0.01" min="0" max="10" value="${myElo !== null ? myElo.toFixed(2) : ELO_BASE.toFixed(2)}" style="font-family:var(--mono)">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label>Player B ELO</label>
+            <input type="number" id="pred-elo-b" step="0.01" min="0" max="10" value="${ELO_BASE.toFixed(2)}" style="font-family:var(--mono)">
+          </div>
+        </div>
+        ${opponents.length > 0 ? `
+        <div class="form-group">
+          <label>Or pick an opponent</label>
+          <select id="pred-opp-select">
+            <option value="">— Select player —</option>
+            ${opponents.map(o => `<option value="${o.elo.toFixed(4)}">${esc(o.name)} (${fmtElo(o.elo)})</option>`).join('')}
+          </select>
+        </div>` : ''}
+        <div id="predict-result" style="margin-top:16px;text-align:center;min-height:80px;display:flex;align-items:center;justify-content:center">
+          <span style="color:var(--text-muted);font-size:.85rem">Enter two ELO values to predict</span>
+        </div>
+      </div>
+    </div>`;
+}
+
+function bindPredictTab(p, allUsers, allPlayers) {
+  function updatePrediction() {
+    const a = parseFloat(document.getElementById('pred-elo-a')?.value) || ELO_BASE;
+    const b = parseFloat(document.getElementById('pred-elo-b')?.value) || ELO_BASE;
+    const pA = expectedScore(a, b);
+    const pB = 1 - pA;
+    const pctA = Math.round(pA * 100);
+    const pctB = Math.round(pB * 100);
+    const res = document.getElementById('predict-result');
+    if (!res) return;
+    const barA = pctA;
+    res.innerHTML = `
+      <div style="width:100%">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <div style="text-align:center;padding:14px;background:var(--bg-surface);border-radius:8px;border:1px solid var(--border)">
+            <div style="font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:4px">Player A · <span id="pred-label-a">—</span></div>
+            <div style="font-family:var(--display);font-size:2.4rem;color:${pctA > 50 ? 'var(--green)' : pctA < 50 ? 'var(--red)' : 'var(--yellow)'};line-height:1">${pctA}%</div>
+            <div style="font-size:.7rem;color:var(--text-muted);margin-top:2px">win probability</div>
+          </div>
+          <div style="text-align:center;padding:14px;background:var(--bg-surface);border-radius:8px;border:1px solid var(--border)">
+            <div style="font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:4px">Player B · <span id="pred-label-b">—</span></div>
+            <div style="font-family:var(--display);font-size:2.4rem;color:${pctB > 50 ? 'var(--green)' : pctB < 50 ? 'var(--red)' : 'var(--yellow)'};line-height:1">${pctB}%</div>
+            <div style="font-size:.7rem;color:var(--text-muted);margin-top:2px">win probability</div>
+          </div>
+        </div>
+        <div style="height:10px;background:var(--bg-surface);border-radius:5px;overflow:hidden;border:1px solid var(--border)">
+          <div style="height:100%;width:${barA}%;background:linear-gradient(90deg,var(--green),var(--yellow));border-radius:5px;transition:width .4s ease"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:.65rem;color:var(--text-muted);margin-top:4px"><span>A wins</span><span>B wins</span></div>
+        ${Math.abs(a - b) < 0.1 ? `<div style="text-align:center;font-size:.78rem;color:var(--text-muted);margin-top:10px">Evenly matched — coin flip territory</div>` : ''}
+      </div>`;
+  }
+
+  const aIn = document.getElementById('pred-elo-a');
+  const bIn = document.getElementById('pred-elo-b');
+  const sel = document.getElementById('pred-opp-select');
+  if (aIn) aIn.oninput = updatePrediction;
+  if (bIn) bIn.oninput = updatePrediction;
+  if (sel) sel.onchange = () => {
+    const v = sel.value;
+    if (v && bIn) { bIn.value = parseFloat(v).toFixed(2); updatePrediction(); }
+  };
+  if (aIn && bIn) updatePrediction();
 }
 
 function showEditProfile() {
@@ -1850,7 +2071,7 @@ async function renderRules() {
     </ul>
 
     <h2>Scoring</h2>
-    <p>A point is scored when the opposing team fails to return the ball. Standard games are played to 11 (win by 2). Win scores available: 3, 7, 11, 15, 17, 21.</p>
+    <p>A point is scored when the opposing team fails to return the ball. Win scores available: 3, 7, 11, 15, 17, 21. The default is 11 for casual play.</p>
 
     <h2>Match Modes</h2>
     <ul>
@@ -1860,7 +2081,7 @@ async function renderRules() {
     </ul>
 
     <h2>ELO System</h2>
-    <p>HSR uses a custom ELO system ranging from 0.00 to 10.00. New players begin placement at 5.00 for 5 games, then enter the rated ladder. Ratings adjust based on opponent strength, score margin, mode, and win streaks.</p>
+    <p>HSR uses a custom ELO system ranging from 0.00 to 10.00. New players begin placement at 5.00 for 3 games, then enter the rated ladder. Ratings adjust based on opponent strength, score margin, and match mode. Streaks are tracked for display but do not affect ELO — your rating reflects sustained performance, not momentum.</p>
     <ul>
       <li><strong>10.0</strong> — Near impossible; requires sustained dominance over top players.</li>
       <li><strong>9.0+</strong> — Elite tier; virtually never loses.</li>
@@ -1888,51 +2109,17 @@ async function renderRules() {
     </div>`;
 }
 
-// ===================== INTEGRITY CHECK =====================
-async function runIntegrityCheck() {
-  if (!currentUser) return;
-  try {
-    const [matchesData, playersData] = await Promise.all([dbGet('matches'), dbGet('players')]);
-    if (!matchesData) return;
-
-    const matches = Object.entries(matchesData).map(([id, m]) => ({ id, ...m })).filter(m => m.status === 'completed').sort((a, b) => a.timestamp - b.timestamp);
-
-    const violations = [];
-    let prevHash = '';
-
-    for (const match of matches) {
-      if (!match.hash) continue;
-      // Verify hash chain
-      const expectedHash = await buildMatchHash(match, match.previousHash || '');
-      if (match.hash !== expectedHash) {
-        violations.push({ type: 'hash_mismatch', matchId: match.id, reason: 'Hash does not match computed value' });
-      }
-      if (prevHash && match.previousHash && match.previousHash !== prevHash) {
-        violations.push({ type: 'chain_broken', matchId: match.id, reason: 'Hash chain broken' });
-      }
-      prevHash = match.hash;
-    }
-
-    if (violations.length > 0) {
-      for (const v of violations) {
-        await dbPush('integrityViolations', { ...v, reportedAt: Date.now(), reportedBy: currentUser.id });
-      }
-    }
-  } catch { }
-}
-
 // ===================== ADMIN =====================
 async function renderAdmin() {
   const c = document.getElementById('page-content');
   if (!currentUser?.isAdmin && !currentUser?.isTracker) { c.innerHTML = '<div class="empty-state"><h3>Access Denied</h3></div>'; return; }
   try {
-    const [matchesData, usersData, disputesData, integrityData, partnerReqData] = await Promise.all([
-      dbGet('matches'), dbGet('users'), dbGet('disputes'), dbGet('integrityViolations'), dbGet('partnerRequests')
+    const [matchesData, usersData, disputesData, partnerReqData, playersData] = await Promise.all([
+      dbGet('matches'), dbGet('users'), dbGet('disputes'), dbGet('partnerRequests'), dbGet('players')
     ]);
     const matches = matchesData ? Object.entries(matchesData).map(([id, m]) => ({ id, ...m })) : [];
     const users = usersData ? Object.entries(usersData).map(([id, u]) => ({ id, ...u })) : [];
     const disputes = disputesData ? Object.entries(disputesData).map(([id, d]) => ({ id, ...d })).filter(d => d.status === 'pending') : [];
-    const violations = integrityData ? Object.entries(integrityData).map(([id, v]) => ({ id, ...v })) : [];
     const partnerReqs = partnerReqData ? Object.entries(partnerReqData).map(([id, r]) => ({ id, ...r })).filter(r => r.status === 'pending') : [];
 
     let tab = 'matches';
@@ -1948,8 +2135,8 @@ async function renderAdmin() {
             ${currentUser.isAdmin ? `
               <button class="${tab === 'users' ? 'active' : ''}" data-tab="users">Users (${users.length})</button>
               <button class="${tab === 'disputes' ? 'active' : ''}" data-tab="disputes">Disputes ${disputes.length > 0 ? `<span style="background:var(--red);color:#fff;padding:1px 5px;border-radius:4px;font-size:.55rem;margin-left:4px">${disputes.length}</span>` : ''}</button>
-              <button class="${tab === 'integrity' ? 'active' : ''}" data-tab="integrity">Integrity ${violations.length > 0 ? `<span style="background:var(--red);color:#fff;padding:1px 5px;border-radius:4px;font-size:.55rem;margin-left:4px">${violations.length}</span>` : ''}</button>
               <button class="${tab === 'partners' ? 'active' : ''}" data-tab="partners">Partners ${partnerReqs.length > 0 ? `<span style="background:var(--yellow);color:var(--black);padding:1px 5px;border-radius:4px;font-size:.55rem;margin-left:4px">${partnerReqs.length}</span>` : ''}</button>
+              <button class="${tab === 'elotools' ? 'active' : ''}" data-tab="elotools">ELO Tools</button>
             ` : ''}
           </div>
 
@@ -1990,7 +2177,7 @@ async function renderAdmin() {
                   <tr>
                     <td style="font-weight:700;cursor:pointer" onclick="navigate('profile','${u.id}')">${esc(u.name)}</td>
                     <td style="color:var(--text-muted);font-size:.75rem">${esc(u.email)}</td>
-                    <td style="font-family:var(--mono)">${fmtElo(u.elo || ELO_BASE)}</td>
+                    <td style="font-family:var(--mono)">${fmtElo((playersData || {})[u.id]?.elo ?? ELO_BASE)}</td>
                     <td>
                       <select class="admin-select" data-uid="${u.id}" onchange="adminSetRole('${u.id}',this.value)">
                         <option value="user" ${u.role === 'user' ? 'selected' : ''}>User</option>
@@ -2032,22 +2219,6 @@ async function renderAdmin() {
               </div>`).join('')}
           ` : ''}
 
-          ${tab === 'integrity' && currentUser.isAdmin ? `
-            <div class="${violations.length > 0 ? 'integrity-banner integrity-warn' : 'integrity-banner integrity-ok'}">
-              ${violations.length > 0 ? `⚠ ${violations.length} integrity violation(s) detected` : '✓ All integrity checks passed'}
-            </div>
-            ${violations.length > 0 ? `<div class="card"><table class="admin-table">
-              <thead><tr><th>Type</th><th>Match</th><th>Reason</th><th>Time</th></tr></thead>
-              <tbody>
-                ${violations.map(v => `<tr>
-                  <td><span class="badge badge-red">${esc(v.type)}</span></td>
-                  <td style="font-family:var(--mono);font-size:.72rem">${(v.matchId || '').slice(0, 12)}…</td>
-                  <td>${esc(v.reason)}</td>
-                  <td style="color:var(--text-muted)">${timeAgo(v.reportedAt)}</td>
-                </tr>`).join('')}
-              </tbody>
-            </table></div>` : ''}
-          ` : ''}
 
           ${tab === 'partners' && currentUser.isAdmin ? `
             ${partnerReqs.length === 0 ? '<div class="empty-state"><span class="emoji">🤝</span><h3>No Pending Partner Requests</h3></div>' :
@@ -2065,14 +2236,100 @@ async function renderAdmin() {
                 </div>
               </div>`).join('')}
           ` : ''}
+
+          ${tab === 'elotools' && currentUser.isAdmin ? `
+            <div class="card" style="margin-bottom:14px">
+              <div class="card-header"><span class="card-header-title">🔧 Recalculate All ELOs from Ledger</span></div>
+              <div class="card-body">
+                <p style="font-size:.84rem;color:var(--text-secondary);margin-bottom:14px">This replays each player's full ELO ledger (skipping voided transactions) to recompute their current ELO. Use this after fixing a formula bug or reversing fraudulent matches.</p>
+                <div style="padding:12px 18px;border-radius:8px;font-size:.78rem;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:14px;background:var(--red-dim);color:var(--red);border:1px solid rgba(255,53,32,0.2)">⚠ This will overwrite all current ELO values. Make sure you want to do this.</div>
+                <button class="btn btn-danger" id="recalc-all-btn" onclick="adminRecalcAllElos()">🔄 Recalculate All ELOs</button>
+                <div id="recalc-log" style="margin-top:14px;font-family:var(--mono);font-size:.72rem;color:var(--text-muted);max-height:260px;overflow-y:auto;background:var(--bg-surface);border-radius:6px;padding:10px;border:1px solid var(--border);display:none"></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header"><span class="card-header-title">📊 ELO Distribution</span></div>
+              <div class="card-body">
+                <div class="chart-wrap" style="margin:0"><canvas id="admin-elo-dist-chart"></canvas></div>
+              </div>
+            </div>
+          ` : ''}
         </div>`;
 
       c.querySelectorAll('.tab-bar button').forEach(b => { if (b.dataset.tab) b.onclick = () => render(b.dataset.tab); });
+      if (tab === 'elotools') setTimeout(() => drawEloDistChart(users, playersData || {}), 100);
     }
     render(tab);
   } catch (err) {
     c.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${esc(err.message)}</p></div>`;
   }
+}
+
+window.adminRecalcAllElos = async () => {
+  if (!confirm('Recalculate ALL player ELOs from their ledgers? This overwrites current ELO values.')) return;
+  const btn = document.getElementById('recalc-all-btn');
+  const log = document.getElementById('recalc-log');
+  if (btn) { btn.disabled = true; btn.textContent = 'Recalculating…'; }
+  if (log) { log.style.display = 'block'; log.innerHTML = ''; }
+
+  function logLine(msg, color = 'var(--text-muted)') {
+    if (log) { log.innerHTML += `<div style="color:${color}">${esc(msg)}</div>`; log.scrollTop = log.scrollHeight; }
+  }
+
+  try {
+    const allPlayers = await dbGet('players');
+    if (!allPlayers) { logLine('No players found.', 'var(--red)'); return; }
+    const ids = Object.keys(allPlayers);
+    logLine(`Found ${ids.length} players. Starting recalculation…`);
+    let updated = 0;
+    for (const uid of ids) {
+      const newElo = await recalcEloFromLedger(uid);
+      const oldElo = allPlayers[uid]?.elo ?? ELO_BASE;
+      const diff = newElo - oldElo;
+      await dbUpdate(`players/${uid}`, { elo: newElo });
+      const name = uid.slice(0, 8);
+      logLine(`${name}… ${fmtElo(oldElo)} → ${fmtElo(newElo)} (${diff >= 0 ? '+' : ''}${diff.toFixed(2)})`, diff !== 0 ? 'var(--yellow)' : 'var(--text-muted)');
+      updated++;
+    }
+    logLine(`✓ Done. ${updated} player(s) updated.`, 'var(--green)');
+    showToast(`Recalculated ${updated} ELOs`, 'success');
+  } catch (err) {
+    logLine('Error: ' + err.message, 'var(--red)');
+    showToast('Recalc failed: ' + err.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔄 Recalculate All ELOs'; }
+  }
+};
+
+function drawEloDistChart(users, players) {
+  const canvas = document.getElementById('admin-elo-dist-chart');
+  if (!canvas) return;
+  if (canvas._chart) canvas._chart.destroy();
+  const buckets = [0,1,2,3,4,5,6,7,8,9,10];
+  const counts = new Array(10).fill(0);
+  const labels = ['0–1','1–2','2–3','3–4','4–5','5–6','6–7','7–8','8–9','9–10'];
+  for (const [uid, p] of Object.entries(players)) {
+    const u = users[uid];
+    if (!u || u.role === 'banned' || (p.gamesPlayed || 0) === 0 || (p.phase === 'placement')) continue;
+    const elo = Math.min(9.999, Math.max(0, p.elo || ELO_BASE));
+    counts[Math.floor(elo)]++;
+  }
+  const ctx = canvas.getContext('2d');
+  canvas._chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ label: 'Players', data: counts, backgroundColor: 'rgba(245,200,0,0.4)', borderColor: '#f5c800', borderWidth: 1, borderRadius: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#4a4a30', font: { size: 10 } }, grid: { color: '#2a2a0a' } },
+        y: { ticks: { color: '#4a4a30', font: { size: 10 }, stepSize: 1 }, grid: { color: '#2a2a0a' }, beginAtZero: true }
+      }
+    }
+  });
 }
 
 window.adminDeleteMatch = async (matchId) => {
@@ -2186,6 +2443,32 @@ window.showNewMatchModal = showNewMatchModal;
 window.showRequestPartnerModal = showRequestPartnerModal;
 window.showEditProfile = showEditProfile;
 window.renderAdmin = renderAdmin;
+
+// ===== PAGINATION HELPERS (profile page) =====
+// These are called from onclick in rendered HTML, so need to be globals.
+// They re-render just the tab content by finding the stored match/ledger data.
+let _profileMatchesCache = null;
+let _profileLedgerCache = null;
+let _profileUidCache = null;
+
+window.profileMatchPage = function(page) {
+  if (!_profileMatchesCache || !_profileUidCache) return;
+  const panel = document.querySelector('.card[data-match-history]') || document.getElementById('match-history-panel');
+  if (!panel) { navigate('profile', _profileUidCache); return; }
+  panel.outerHTML = renderProfileMatches(_profileMatchesCache, _profileUidCache, page);
+};
+
+window.ledgerPageNav = function(page) {
+  if (!_profileLedgerCache) return;
+  const panel = document.getElementById('ledger-panel');
+  if (!panel) { navigate('profile', _profileUidCache); return; }
+  panel.innerHTML = renderProfileLedger(_profileLedgerCache, page);
+};
+
+window.rerenderH2H = function() {
+  // Just navigate to re-render the whole profile with current h2h tab
+  if (_profileUidCache) navigate('profile', _profileUidCache);
+};
 
 init();
 </script>

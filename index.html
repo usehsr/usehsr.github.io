@@ -516,57 +516,79 @@ function getTypeMultiplier(type) {
 function getStreakBonus(_streak) { return 1.0; }
 
 // Singles ELO calculation
+// Uses a single shared K (average of both players') so gain === loss and ELO is conserved.
 function calcSinglesElo(winnerElo, loserElo, winnerScore, loserScore, maxScore, type, winnerPhase, loserPhase, winnerStreak) {
   const exp = expectedScore(winnerElo, loserElo);
   const kW = getKFactor(winnerPhase, winnerElo);
   const kL = getKFactor(loserPhase, loserElo);
+  const k = (kW + kL) / 2; // shared K — guarantees symmetric gain/loss
   const scoreFactor = getScoreFactor(winnerScore, loserScore, maxScore);
   const typeMult = getTypeMultiplier(type);
   const streakBonus = getStreakBonus(winnerStreak);
 
-  const rawGain = kW * (1 - exp) * scoreFactor * typeMult * streakBonus;
-  const rawLoss = kL * exp * scoreFactor * typeMult;
+  // gain = k * (1 - exp) * modifiers; loss mirrors it exactly
+  const delta = Math.max(0, k * (1 - exp) * scoreFactor * typeMult * streakBonus);
 
-  // Clamp to not lose elo on win or gain on loss
-  const winnerDelta = Math.max(0, rawGain);
-  const loserDelta = -Math.max(0, rawLoss);
-
-  return { winnerDelta, loserDelta };
+  return { winnerDelta: delta, loserDelta: -delta };
 }
 
 // Doubles ELO calculation
+// Uses a single shared K (average of all 4 players') for conservation.
+// Winner-side individual adjustments are scaled but must sum to the same total as loser-side.
 function calcDoublesElo(team1Elos, team2Elos, winnerTeam, winnerScore, loserScore, maxScore, type, phases, winnerStreak) {
   // Team average elo
   const t1Avg = (team1Elos[0] + team1Elos[1]) / 2;
   const t2Avg = (team2Elos[0] + team2Elos[1]) / 2;
   const winnerAvg = winnerTeam === 0 ? t1Avg : t2Avg;
   const loserAvg = winnerTeam === 0 ? t2Avg : t1Avg;
+  const winnerElos = winnerTeam === 0 ? team1Elos : team2Elos;
+  const loserElos = winnerTeam === 0 ? team2Elos : team1Elos;
+  const winnerPhases = winnerTeam === 0 ? [phases[0], phases[1]] : [phases[2], phases[3]];
+  const loserPhases = winnerTeam === 0 ? [phases[2], phases[3]] : [phases[0], phases[1]];
 
   const exp = expectedScore(winnerAvg, loserAvg);
   const scoreFactor = getScoreFactor(winnerScore, loserScore, maxScore);
   const typeMult = getTypeMultiplier(type);
   const streakBonus = getStreakBonus(winnerStreak);
 
-  const deltas = {};
-  const winnerElos = winnerTeam === 0 ? team1Elos : team2Elos;
-  const loserElos = winnerTeam === 0 ? team2Elos : team1Elos;
-  const winnerPhases = winnerTeam === 0 ? [phases[0], phases[1]] : [phases[2], phases[3]];
-  const loserPhases = winnerTeam === 0 ? [phases[2], phases[3]] : [phases[0], phases[1]];
+  // Shared K = average of all 4 players' individual K factors
+  const allKs = [
+    getKFactor(winnerPhases[0], winnerElos[0]),
+    getKFactor(winnerPhases[1], winnerElos[1]),
+    getKFactor(loserPhases[0], loserElos[0]),
+    getKFactor(loserPhases[1], loserElos[1]),
+  ];
+  const sharedK = allKs.reduce((s, k) => s + k, 0) / 4;
 
-  // For each player, adjust based on how their individual elo compares to team avg
-  // Weaker player on winning team gets a bit more, stronger gets less
-  winnerElos.forEach((elo, i) => {
-    const k = getKFactor(winnerPhases[i], elo);
-    const relStrength = (elo - winnerAvg) / 5; // normalized relative strength
-    const indivFactor = 1.0 - relStrength * 0.2; // stronger player gets slightly less
-    deltas[`w${i}`] = Math.max(0, k * (1 - exp) * scoreFactor * typeMult * streakBonus * indivFactor);
+  // Total ELO change for each side (conserved: totalGain === totalLoss)
+  const totalDelta = Math.max(0, sharedK * (1 - exp) * scoreFactor * typeMult * streakBonus);
+
+  // Distribute among individuals with relative-strength weighting, but keep totals symmetric.
+  // Winners: weaker player on winning team gets a bit more (indivFactor < 1 means stronger)
+  const deltas = {};
+
+  // Compute raw individual weights for winners
+  const wWeights = winnerElos.map(elo => {
+    const relStrength = (elo - winnerAvg) / (Math.max(...winnerElos) - Math.min(...winnerElos) + 0.01);
+    return Math.max(0.7, 1.0 - relStrength * 0.2);
+  });
+  const wWeightSum = wWeights.reduce((s, w) => s + w, 0);
+
+  // Each winner gets a share of totalDelta proportional to their weight
+  winnerElos.forEach((_, i) => {
+    deltas[`w${i}`] = totalDelta * (wWeights[i] / wWeightSum);
   });
 
-  loserElos.forEach((elo, i) => {
-    const k = getKFactor(loserPhases[i], elo);
-    const relStrength = (elo - loserAvg) / 5;
-    const indivFactor = 1.0 + relStrength * 0.1; // stronger player on losing team loses a bit more
-    deltas[`l${i}`] = -Math.max(0, k * exp * scoreFactor * typeMult * indivFactor);
+  // Compute raw individual weights for losers (stronger loses slightly more)
+  const lWeights = loserElos.map(elo => {
+    const relStrength = (elo - loserAvg) / (Math.max(...loserElos) - Math.min(...loserElos) + 0.01);
+    return Math.max(0.7, 1.0 + relStrength * 0.1);
+  });
+  const lWeightSum = lWeights.reduce((s, w) => s + w, 0);
+
+  // Each loser loses a share of totalDelta proportional to their weight
+  loserElos.forEach((_, i) => {
+    deltas[`l${i}`] = -(totalDelta * (lWeights[i] / lWeightSum));
   });
 
   return deltas;

@@ -536,15 +536,11 @@ function getUnderdogFactor(winnerElo, loserElo) {
 // since the better player on a team has an outsized impact vs simple average.
 function calcTeamStrength(eloA, eloB) {
   const gap = Math.abs(eloA - eloB);
-  // Piecewise carry curve:
-  //   gap=0   -> 50/50
-  //   gap=0.5 -> 60/40
-  //   gap=1   -> 65/35
-  //   gap=2+  -> 70/30 (cap)
+  // Piecewise carry curve: gap=0->50/50, gap=0.5->60/40, gap=1->65/35, gap=2+->70/30
   let strongWeight;
-  if (gap < 0.5)       strongWeight = 0.50 + gap * 0.20;
-  else if (gap < 1.0)  strongWeight = 0.60 + (gap - 0.5) * 0.10;
-  else                 strongWeight = Math.min(0.70, 0.65 + (gap - 1.0) * 0.05);
+  if (gap < 0.5)      strongWeight = 0.50 + gap * 0.20;
+  else if (gap < 1.0) strongWeight = 0.60 + (gap - 0.5) * 0.10;
+  else                strongWeight = Math.min(0.70, 0.65 + (gap - 1.0) * 0.05);
   const [high, low] = eloA >= eloB ? [eloA, eloB] : [eloB, eloA];
   return high * strongWeight + low * (1 - strongWeight);
 }
@@ -603,10 +599,10 @@ function calcDoublesElo(team1Elos, team2Elos, winnerTeam, winnerScore, loserScor
 
   const deltas = {};
 
-  // Winners: weaker player earns more — scale with actual partner gap, not a hardcoded weight
+  // Winners: weaker player earns more, scaled by actual partner gap
   const wAvg = (winnerElos[0] + winnerElos[1]) / 2;
   const wGap = Math.abs(winnerElos[0] - winnerElos[1]);
-  const wCarryScale = Math.min(0.4, wGap * 0.1); // 0 at equal partners, up to 0.4 at gap>=4
+  const wCarryScale = Math.min(0.4, wGap * 0.1);
   const wWeights = winnerElos.map(elo => {
     const rel = (elo - wAvg) / (Math.max(...winnerElos) - Math.min(...winnerElos) + 0.01);
     return Math.max(0.6, 1.0 - rel * wCarryScale);
@@ -614,10 +610,10 @@ function calcDoublesElo(team1Elos, team2Elos, winnerTeam, winnerScore, loserScor
   const wWeightSum = wWeights.reduce((s, w) => s + w, 0);
   winnerElos.forEach((_, i) => { deltas[`w${i}`] = totalDelta * (wWeights[i] / wWeightSum); });
 
-  // Losers: stronger player loses more — scale with actual partner gap
+  // Losers: stronger player loses more, scaled by actual partner gap
   const lAvg = (loserElos[0] + loserElos[1]) / 2;
   const lGap = Math.abs(loserElos[0] - loserElos[1]);
-  const lCarryScale = Math.min(0.3, lGap * 0.1); // 0 at equal partners, up to 0.3 at gap>=3
+  const lCarryScale = Math.min(0.3, lGap * 0.1);
   const lWeights = loserElos.map(elo => {
     const rel = (elo - lAvg) / (Math.max(...loserElos) - Math.min(...loserElos) + 0.01);
     return Math.max(0.6, 1.0 + rel * lCarryScale);
@@ -1500,6 +1496,26 @@ async function showNewMatchModal() {
         await dbUpdate(`players/${id}`, updates);
       }
 
+      // Auto-update pair W/L if doubles
+      if (isDoubles) {
+        try {
+          const pairsSnap = await dbGet('doublesPairs');
+          if (pairsSnap) {
+            for (const [pairId, pair] of Object.entries(pairsSnap)) {
+              const p1 = pair.player1; const p2 = pair.player2;
+              const onT1 = matchConfig.team1.includes(p1) && matchConfig.team1.includes(p2);
+              const onT2 = matchConfig.team2.includes(p1) && matchConfig.team2.includes(p2);
+              if (!onT1 && !onT2) continue;
+              const won = (onT1 && winner === 1) || (onT2 && winner === 2);
+              await dbUpdate(`doublesPairs/${pairId}`, {
+                wins:   (pair.wins   || 0) + (won ? 1 : 0),
+                losses: (pair.losses || 0) + (won ? 0 : 1)
+              });
+            }
+          }
+        } catch { /* non-fatal */ }
+      }
+
       closeModal();
       showToast('Match recorded!', 'success');
       // Show elo popup for current user
@@ -2309,6 +2325,14 @@ async function renderAdmin() {
                 <div id="recalc-log" style="margin-top:14px;font-family:var(--mono);font-size:.72rem;color:var(--text-muted);max-height:260px;overflow-y:auto;background:var(--bg-surface);border-radius:6px;padding:10px;border:1px solid var(--border);display:none"></div>
               </div>
             </div>
+            <div class="card" style="margin-bottom:14px">
+              <div class="card-header"><span class="card-header-title">🤝 Sync Doubles Pair Records</span></div>
+              <div class="card-body">
+                <p style="font-size:.84rem;color:var(--text-secondary);margin-bottom:14px">Scans all completed doubles matches and recalculates wins/losses for every registered pair. Run this any time pair records look wrong.</p>
+                <button class="btn btn-secondary" id="sync-pairs-btn" onclick="adminSyncDoublesPairs()">🔄 Sync Pair W/L Records</button>
+                <div id="sync-pairs-log" style="margin-top:14px;font-family:var(--mono);font-size:.72rem;color:var(--text-muted);max-height:220px;overflow-y:auto;background:var(--bg-surface);border-radius:6px;padding:10px;border:1px solid var(--border);display:none"></div>
+              </div>
+            </div>
             <div class="card">
               <div class="card-header"><span class="card-header-title">📊 ELO Distribution</span></div>
               <div class="card-body">
@@ -2360,6 +2384,58 @@ window.adminRecalcAllElos = async () => {
     showToast('Recalc failed: ' + err.message, 'error');
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = '🔄 Recalculate All ELOs'; }
+  }
+};
+
+window.adminSyncDoublesPairs = async () => {
+  const btn = document.getElementById('sync-pairs-btn');
+  const log = document.getElementById('sync-pairs-log');
+  if (btn) { btn.disabled = true; btn.textContent = 'Syncing...'; }
+  if (log) { log.style.display = 'block'; log.innerHTML = ''; }
+  function slog(msg, color) {
+    if (!log) return;
+    const d = document.createElement('div');
+    d.style.color = color || 'var(--text-muted)';
+    d.textContent = msg;
+    log.appendChild(d);
+    log.scrollTop = log.scrollHeight;
+  }
+  try {
+    const [matchesData, pairsData] = await Promise.all([dbGet('matches'), dbGet('doublesPairs')]);
+    if (!pairsData) { slog('No doubles pairs registered.', 'var(--yellow)'); return; }
+    const matches = matchesData
+      ? Object.entries(matchesData).map(([id, m]) => ({ id, ...m }))
+          .filter(m => m.matchType === 'doubles' && m.status === 'completed' && !m.hidden)
+      : [];
+    slog('Found ' + matches.length + ' completed doubles matches.');
+    const pairs = Object.entries(pairsData);
+    slog('Found ' + pairs.length + ' registered pair(s). Calculating...');
+    let updated = 0;
+    for (const [pairId, pair] of pairs) {
+      const p1 = pair.player1; const p2 = pair.player2;
+      let wins = 0, losses = 0;
+      for (const m of matches) {
+        const t1 = m.team1 || []; const t2 = m.team2 || [];
+        const onT1 = t1.includes(p1) && t1.includes(p2);
+        const onT2 = t2.includes(p1) && t2.includes(p2);
+        if (!onT1 && !onT2) continue;
+        const won = (onT1 && m.winner === 1) || (onT2 && m.winner === 2);
+        if (won) wins++; else losses++;
+      }
+      const oldW = pair.wins || 0; const oldL = pair.losses || 0;
+      const changed = oldW !== wins || oldL !== losses;
+      await dbUpdate('doublesPairs/' + pairId, { wins, losses });
+      slog((changed ? 'Updated' : 'No change') + ': ' + oldW + 'W/' + oldL + 'L -> ' + wins + 'W/' + losses + 'L',
+           changed ? 'var(--yellow)' : 'var(--text-muted)');
+      if (changed) updated++;
+    }
+    slog('Done. ' + updated + ' pair(s) updated.', 'var(--green)');
+    showToast('Synced ' + pairs.length + ' pair(s), ' + updated + ' updated', 'success');
+  } catch (err) {
+    slog('Error: ' + err.message, 'var(--red)');
+    showToast('Sync failed: ' + err.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Sync Pair W/L Records'; }
   }
 };
 

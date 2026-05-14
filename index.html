@@ -1032,7 +1032,7 @@ async function renderMatchDetail(matchId) {
           <button class="btn btn-ghost" onclick="navigate('matches')">← Back</button>
           <span style="color:${modeColor};font-weight:800;font-size:.8rem;text-transform:uppercase;letter-spacing:.1em">${modeLabel}</span>
           ${match.disputed ? `<span class="badge badge-red">⚑ Disputed</span>` : ''}
-          ${match.version > 1 ? `<span class="badge badge-blue">v${match.version} Modified</span>` : ''}
+
         </div>
         <div class="match-detail-grid">
           <div>

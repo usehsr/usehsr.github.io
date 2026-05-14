@@ -204,6 +204,7 @@ main{flex:1;max-width:1400px;margin:0 auto;padding:24px 20px;width:100%}
 .match-winner-badge.doubles{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(74,158,255,0.2)}
 .type-badge-competitive{color:var(--yellow)}
 .type-badge-casual{color:var(--text-muted)}
+.type-badge-semi{color:#f59e0b}
 .type-badge-tournament{color:var(--orange);text-shadow:0 0 6px rgba(255,140,0,0.4)}
 .elo-delta-pos{color:var(--green);font-family:var(--mono);font-weight:700}
 .elo-delta-neg{color:var(--red);font-family:var(--mono);font-weight:700}
@@ -479,44 +480,61 @@ function getPlayerPhase(gamesPlayed) {
 }
 
 // K-factor based on phase and elo (diminishing returns at high elo)
-// Reduced base values so the 0–10 scale is harder to climb
+// v2: 1.5x the original base values for more meaningful movement per match
 function getKFactor(phase, currentElo) {
   let base;
-  if (phase === 'placement') base = 0.6;
-  else if (phase === 'volatile') base = 0.3;
-  else base = 0.15;
-  // Diminishing returns at higher elos
+  if (phase === 'placement') base = 0.9;    // was 0.6
+  else if (phase === 'volatile') base = 0.45; // was 0.3
+  else base = 0.225;                          // was 0.15
+  // Diminishing returns at higher elos — same curve, higher ceiling
   const diminish = Math.max(0.3, 1 - Math.pow(Math.max(0, currentElo - 6) / 6, 1.5) * 0.7);
   return base * diminish;
 }
 
 // Expected win probability using logistic function
-// Divisor = ~20% of ELO range (0-10 scale → 2.0) so a 2-point gap ≈ 73% win probability
+// Divisor = 2.0 so a 2-point gap ≈ 73% win probability on the 0–10 scale
 function expectedScore(eloA, eloB) {
   return 1 / (1 + Math.pow(10, (eloB - eloA) / 2.0));
 }
 
-// Score factor: blowout vs close game — capped at 1.2 to prevent score-running
+// Score factor: blowout vs close game — 0.6 (close) to 1.2 (blowout)
 function getScoreFactor(winnerScore, loserScore, maxScore) {
   const margin = winnerScore - loserScore;
   const normalized = margin / maxScore;
-  // 0.6 for very close, 1.2 for blowout (was 1.4)
   return 0.6 + normalized * 0.6;
 }
 
-// Type multiplier
+// Type multiplier — v2 adds semi-competitive at 0.75x
 function getTypeMultiplier(type) {
   if (type === 'casual') return 0.5;
+  if (type === 'semi-competitive') return 0.75;
   if (type === 'tournament') return 1.25;
   return 1.0; // competitive
 }
 
-// Streak bonus removed — streaks are shown on profiles for info but do not affect ELO.
-// ELO already captures relative strength; rewarding hot streaks would double-count momentum.
+// Underdog protection (v2): when the winner is a heavy favorite, compress the
+// delta so heavy underdogs aren't punished repeatedly for expected losses.
+// Factor starts compressing at a 0.75-point gap, floors at 0.40.
+// Applied symmetrically to both winner gain and loser loss — stays zero-sum.
+function getUnderdogFactor(winnerElo, loserElo) {
+  const gap = winnerElo - loserElo;
+  if (gap <= 0.75) return 1.0;
+  return Math.max(0.40, 1.0 - (gap - 0.75) * 0.25);
+}
+
+// Doubles team strength: weighted average (55/45) toward the stronger player,
+// since the better player on a team has an outsized impact vs simple average.
+function calcTeamStrength(eloA, eloB) {
+  const [high, low] = eloA >= eloB ? [eloA, eloB] : [eloB, eloA];
+  return high * 0.55 + low * 0.45;
+}
+
+// Streak bonus removed — streaks are displayed on profiles but do not affect ELO.
 function getStreakBonus(_streak) { return 1.0; }
 
-// Singles ELO calculation
-// Uses a single shared K (average of both players') so gain === loss and ELO is conserved.
+// Singles ELO calculation (v2)
+// Shared K guarantees gain === loss (zero-sum). Underdog factor compresses
+// deltas when there's a large skill gap so mismatched games don't over-penalize.
 function calcSinglesElo(winnerElo, loserElo, winnerScore, loserScore, maxScore, type, winnerPhase, loserPhase, winnerStreak) {
   const exp = expectedScore(winnerElo, loserElo);
   const kW = getKFactor(winnerPhase, winnerElo);
@@ -524,34 +542,34 @@ function calcSinglesElo(winnerElo, loserElo, winnerScore, loserScore, maxScore, 
   const k = (kW + kL) / 2; // shared K — guarantees symmetric gain/loss
   const scoreFactor = getScoreFactor(winnerScore, loserScore, maxScore);
   const typeMult = getTypeMultiplier(type);
-  const streakBonus = getStreakBonus(winnerStreak);
+  const underdogFactor = getUnderdogFactor(winnerElo, loserElo);
 
-  // gain = k * (1 - exp) * modifiers; loss mirrors it exactly
-  const delta = Math.max(0, k * (1 - exp) * scoreFactor * typeMult * streakBonus);
-
+  const delta = Math.max(0, k * (1 - exp) * scoreFactor * typeMult * underdogFactor);
   return { winnerDelta: delta, loserDelta: -delta };
 }
 
-// Doubles ELO calculation
-// Uses a single shared K (average of all 4 players') for conservation.
-// Winner-side individual adjustments are scaled but must sum to the same total as loser-side.
+// Doubles ELO calculation (v2)
+// Team strength uses weighted average (55/45) instead of simple mean, so
+// carrying a weaker partner is properly reflected in expected score.
+// Shared K across all 4 players ensures zero-sum conservation.
+// Underdog factor applied at team level.
+// Individual distribution: weaker winners earn slightly more, stronger losers lose slightly more.
 function calcDoublesElo(team1Elos, team2Elos, winnerTeam, winnerScore, loserScore, maxScore, type, phases, winnerStreak) {
-  // Team average elo
-  const t1Avg = (team1Elos[0] + team1Elos[1]) / 2;
-  const t2Avg = (team2Elos[0] + team2Elos[1]) / 2;
-  const winnerAvg = winnerTeam === 0 ? t1Avg : t2Avg;
-  const loserAvg = winnerTeam === 0 ? t2Avg : t1Avg;
-  const winnerElos = winnerTeam === 0 ? team1Elos : team2Elos;
-  const loserElos = winnerTeam === 0 ? team2Elos : team1Elos;
+  const t1Strength = calcTeamStrength(team1Elos[0], team1Elos[1]);
+  const t2Strength = calcTeamStrength(team2Elos[0], team2Elos[1]);
+  const winnerStrength = winnerTeam === 0 ? t1Strength : t2Strength;
+  const loserStrength  = winnerTeam === 0 ? t2Strength : t1Strength;
+  const winnerElos  = winnerTeam === 0 ? team1Elos : team2Elos;
+  const loserElos   = winnerTeam === 0 ? team2Elos : team1Elos;
   const winnerPhases = winnerTeam === 0 ? [phases[0], phases[1]] : [phases[2], phases[3]];
-  const loserPhases = winnerTeam === 0 ? [phases[2], phases[3]] : [phases[0], phases[1]];
+  const loserPhases  = winnerTeam === 0 ? [phases[2], phases[3]] : [phases[0], phases[1]];
 
-  const exp = expectedScore(winnerAvg, loserAvg);
+  const exp = expectedScore(winnerStrength, loserStrength);
   const scoreFactor = getScoreFactor(winnerScore, loserScore, maxScore);
   const typeMult = getTypeMultiplier(type);
-  const streakBonus = getStreakBonus(winnerStreak);
+  const underdogFactor = getUnderdogFactor(winnerStrength, loserStrength);
 
-  // Shared K = average of all 4 players' individual K factors
+  // Shared K = average of all 4 individual K-factors — guarantees zero-sum
   const allKs = [
     getKFactor(winnerPhases[0], winnerElos[0]),
     getKFactor(winnerPhases[1], winnerElos[1]),
@@ -560,36 +578,28 @@ function calcDoublesElo(team1Elos, team2Elos, winnerTeam, winnerScore, loserScor
   ];
   const sharedK = allKs.reduce((s, k) => s + k, 0) / 4;
 
-  // Total ELO change for each side (conserved: totalGain === totalLoss)
-  const totalDelta = Math.max(0, sharedK * (1 - exp) * scoreFactor * typeMult * streakBonus);
+  // Total delta each side trades (conserved)
+  const totalDelta = Math.max(0, sharedK * (1 - exp) * scoreFactor * typeMult * underdogFactor);
 
-  // Distribute among individuals with relative-strength weighting, but keep totals symmetric.
-  // Winners: weaker player on winning team gets a bit more (indivFactor < 1 means stronger)
   const deltas = {};
 
-  // Compute raw individual weights for winners
+  // Winners: weaker player gets a touch more (they took more risk relative to their rating)
+  const wAvg = (winnerElos[0] + winnerElos[1]) / 2;
   const wWeights = winnerElos.map(elo => {
-    const relStrength = (elo - winnerAvg) / (Math.max(...winnerElos) - Math.min(...winnerElos) + 0.01);
-    return Math.max(0.7, 1.0 - relStrength * 0.2);
+    const rel = (elo - wAvg) / (Math.max(...winnerElos) - Math.min(...winnerElos) + 0.01);
+    return Math.max(0.7, 1.0 - rel * 0.2);
   });
   const wWeightSum = wWeights.reduce((s, w) => s + w, 0);
+  winnerElos.forEach((_, i) => { deltas[`w${i}`] = totalDelta * (wWeights[i] / wWeightSum); });
 
-  // Each winner gets a share of totalDelta proportional to their weight
-  winnerElos.forEach((_, i) => {
-    deltas[`w${i}`] = totalDelta * (wWeights[i] / wWeightSum);
-  });
-
-  // Compute raw individual weights for losers (stronger loses slightly more)
+  // Losers: stronger player on losing team loses slightly more
+  const lAvg = (loserElos[0] + loserElos[1]) / 2;
   const lWeights = loserElos.map(elo => {
-    const relStrength = (elo - loserAvg) / (Math.max(...loserElos) - Math.min(...loserElos) + 0.01);
-    return Math.max(0.7, 1.0 + relStrength * 0.1);
+    const rel = (elo - lAvg) / (Math.max(...loserElos) - Math.min(...loserElos) + 0.01);
+    return Math.max(0.7, 1.0 + rel * 0.1);
   });
   const lWeightSum = lWeights.reduce((s, w) => s + w, 0);
-
-  // Each loser loses a share of totalDelta proportional to their weight
-  loserElos.forEach((_, i) => {
-    deltas[`l${i}`] = -(totalDelta * (lWeights[i] / lWeightSum));
-  });
+  loserElos.forEach((_, i) => { deltas[`l${i}`] = -(totalDelta * (lWeights[i] / lWeightSum)); });
 
   return deltas;
 }
@@ -869,6 +879,7 @@ async function renderMatches() {
             <button class="filter-pill ${mode === 'all' ? 'active' : ''}" data-fmode="all">All Modes</button>
             <button class="filter-pill ${mode === 'competitive' ? 'active' : ''}" data-fmode="competitive">Competitive</button>
             <button class="filter-pill ${mode === 'casual' ? 'active' : ''}" data-fmode="casual">Casual</button>
+            <button class="filter-pill ${mode === 'semi-competitive' ? 'active' : ''}" data-fmode="semi-competitive">Semi-Comp</button>
             <button class="filter-pill ${mode === 'tournament' ? 'active' : ''}" data-fmode="tournament">Tournament</button>
           </div>
           ${filtered.length === 0 ? `<div class="empty-state"><span class="emoji">🏐</span><h3>No Matches Yet</h3><p>Matches will appear here once tracked.</p></div>` : `
@@ -891,8 +902,8 @@ async function renderMatches() {
 
 function renderMatchCard(m, users) {
   const isDoubles = m.matchType === 'doubles';
-  const modeClass = m.mode === 'tournament' ? 'type-badge-tournament' : m.mode === 'competitive' ? 'type-badge-competitive' : 'type-badge-casual';
-  const modeLabel = m.mode === 'tournament' ? '🏆 Tournament' : m.mode === 'competitive' ? '⚡ Competitive' : '🎮 Casual';
+  const modeClass = m.mode === 'tournament' ? 'type-badge-tournament' : m.mode === 'competitive' ? 'type-badge-competitive' : m.mode === 'semi-competitive' ? 'type-badge-semi' : 'type-badge-casual';
+  const modeLabel = m.mode === 'tournament' ? '🏆 Tournament' : m.mode === 'competitive' ? '⚡ Competitive' : m.mode === 'semi-competitive' ? '🔶 Semi-Comp' : '🎮 Casual';
 
   let playersHtml = '';
   if (isDoubles) {
@@ -956,8 +967,8 @@ async function renderMatchDetail(matchId) {
     const users = usersData || {};
     const isDoubles = match.matchType === 'doubles';
 
-    const modeLabel = match.mode === 'tournament' ? '🏆 Tournament' : match.mode === 'competitive' ? '⚡ Competitive' : '🎮 Casual';
-    const modeColor = match.mode === 'tournament' ? 'var(--orange)' : match.mode === 'competitive' ? 'var(--yellow)' : 'var(--text-muted)';
+    const modeLabel = match.mode === 'tournament' ? '🏆 Tournament' : match.mode === 'competitive' ? '⚡ Competitive' : match.mode === 'semi-competitive' ? '🔶 Semi-Comp' : '🎮 Casual';
+    const modeColor = match.mode === 'tournament' ? 'var(--orange)' : match.mode === 'competitive' ? 'var(--yellow)' : match.mode === 'semi-competitive' ? '#f59e0b' : 'var(--text-muted)';
 
     let playerSection = '';
     let eloSection = '';
@@ -1167,8 +1178,9 @@ async function showNewMatchModal() {
         </div>
         <div class="form-group">
           <label>Mode</label>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:6px">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-top:6px">
             <button class="score-option ${matchConfig.mode==='casual'?'selected':''}" style="width:100%;height:auto;padding:10px 8px;font-family:var(--font);font-size:.8rem;font-weight:800" onclick="setMatchProp('mode','casual')">Casual<br><span style="font-size:.62rem;opacity:.6">50% ELO</span></button>
+            <button class="score-option ${matchConfig.mode==='semi-competitive'?'selected':''}" style="width:100%;height:auto;padding:10px 8px;font-family:var(--font);font-size:.8rem;font-weight:800" onclick="setMatchProp('mode','semi-competitive')">Semi-Comp<br><span style="font-size:.62rem;opacity:.6">75% ELO</span></button>
             <button class="score-option ${matchConfig.mode==='competitive'?'selected':''}" style="width:100%;height:auto;padding:10px 8px;font-family:var(--font);font-size:.8rem;font-weight:800" onclick="setMatchProp('mode','competitive')">Competitive<br><span style="font-size:.62rem;opacity:.6">100% ELO</span></button>
             <button class="score-option ${matchConfig.mode==='tournament'?'selected':''}" style="width:100%;height:auto;padding:10px 8px;font-family:var(--font);font-size:.8rem;font-weight:800" onclick="setMatchProp('mode','tournament')">Tournament<br><span style="font-size:.62rem;opacity:.6">125% ELO</span></button>
           </div>
@@ -1841,7 +1853,7 @@ function renderMatchRow(m, uid) {
   const isDoubles = m.matchType === 'doubles';
   const won = isDoubles ? (m.winner === 1 ? (m.team1 || []).includes(uid) : (m.team2 || []).includes(uid)) : (m.winner === 1 ? m.player1 === uid : m.player2 === uid);
   const delta = m.eloDeltas?.[uid] ?? (m.player1 === uid && m.p1EloAfter != null && m.p1EloBefore != null ? m.p1EloAfter - m.p1EloBefore : m.player2 === uid && m.p2EloAfter != null && m.p2EloBefore != null ? m.p2EloAfter - m.p2EloBefore : 0);
-  const modeColor = m.mode === 'tournament' ? 'var(--orange)' : m.mode === 'competitive' ? 'var(--yellow)' : 'var(--text-muted)';
+  const modeColor = m.mode === 'tournament' ? 'var(--orange)' : m.mode === 'competitive' ? 'var(--yellow)' : m.mode === 'semi-competitive' ? '#f59e0b' : 'var(--text-muted)';
   return `
     <div class="lb-row" onclick="navigate('match-detail','${m.id}')">
       <div style="width:36px;text-align:center;font-size:1.2rem">${won ? '🏆' : '💀'}</div>
@@ -2098,12 +2110,14 @@ async function renderRules() {
     <h2>Match Modes</h2>
     <ul>
       <li><strong style="color:var(--text-muted)">Casual:</strong> 50% ELO impact. Good for practice and fun games.</li>
+      <li><strong style="color:#f59e0b">Semi-Competitive:</strong> 75% ELO impact. Good for serious warmups or practice sets.</li>
       <li><strong style="color:var(--yellow)">Competitive:</strong> 100% ELO impact. Standard ranked match.</li>
       <li><strong style="color:var(--orange)">Tournament:</strong> 125% ELO impact. Reserved for official tournaments.</li>
     </ul>
 
     <h2>ELO System</h2>
-    <p>HSR uses a custom ELO system ranging from 0.00 to 10.00. New players begin placement at 5.00 for 3 games, then enter the rated ladder. Ratings adjust based on opponent strength, score margin, and match mode. Streaks are tracked for display but do not affect ELO — your rating reflects sustained performance, not momentum.</p>
+    <p>HSR uses a custom ELO system ranging from 0.00 to 10.00. New players begin placement at 5.00 for 3 games, then enter the rated ladder. Ratings adjust based on opponent strength, score margin, match mode, and a skill-gap protection factor. Streaks are tracked for display but do not affect ELO — your rating reflects sustained performance, not momentum.</p>
+    <p>The system is strictly zero-sum: every point gained by one player is lost by another. Doubles uses a weighted team strength formula (55/45 toward the stronger player) to better reflect individual contribution. When there's a large ELO gap, losses for the underdog are modestly compressed to prevent repeated mismatched games from being overly punishing.</p>
     <ul>
       <li><strong>10.0</strong> — Near impossible; requires sustained dominance over top players.</li>
       <li><strong>9.0+</strong> — Elite tier; virtually never loses.</li>

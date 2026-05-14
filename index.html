@@ -473,30 +473,21 @@ function computeEloFromLedger(transactions) {
   return validTx.reduce((sum, t) => sum + (t.delta || 0), ELO_BASE);
 }
 
-// Phase is based on RATED games played (non-casual), not total games.
-// FIX: a player who plays all their placement games casually would previously exit
-// placement with a miscalibrated ELO because casual matches use 50% type multiplier
-// while placement K is at its highest. Now casual matches don't count toward the
-// placement/volatile thresholds — only competitive, semi-competitive, and tournament
-// matches move the placement counter. gamesPlayed still tracks everything for W/L display.
-function getPlayerPhase(ratedGamesPlayed) {
-  if (ratedGamesPlayed < PLACEMENT_GAMES) return 'placement';
-  if (ratedGamesPlayed < PLACEMENT_GAMES + HIGH_VOL_GAMES) return 'volatile';
+function getPlayerPhase(gamesPlayed) {
+  if (gamesPlayed < PLACEMENT_GAMES) return 'placement';
+  if (gamesPlayed < PLACEMENT_GAMES + HIGH_VOL_GAMES) return 'volatile';
   return 'stable';
 }
 
 // K-factor based on phase and elo (diminishing returns at high elo)
-// v4: floor raised from 0.3 to 0.5 — the old 0.3 floor stacked with the underdog
-// factor's compression to nearly freeze top-ELO players. With the higher floor,
-// a stable player at 9.0 still has meaningful K, preventing ossification at the top.
+// v3: doubled base values for meaningful per-match movement
 function getKFactor(phase, currentElo) {
   let base;
-  if (phase === 'placement') base = 1.8;   // big swings during calibration
-  else if (phase === 'volatile') base = 0.9;
-  else base = 0.45;
-  // Diminishing returns above 6.0 so top players must keep earning it,
-  // but floor at 0.5 so two compression layers don't stack to near-zero.
-  const diminish = Math.max(0.5, 1 - Math.pow(Math.max(0, currentElo - 6) / 6, 1.5) * 0.7);
+  if (phase === 'placement') base = 1.8;   // was 0.9 — big swings during calibration
+  else if (phase === 'volatile') base = 0.9; // was 0.45
+  else base = 0.45;                          // was 0.225
+  // Diminishing returns above 6.0 so top players must keep earning it
+  const diminish = Math.max(0.3, 1 - Math.pow(Math.max(0, currentElo - 6) / 6, 1.5) * 0.7);
   return base * diminish;
 }
 
@@ -508,14 +499,11 @@ function expectedScore(eloA, eloB) {
   return 1 / (1 + Math.pow(10, (eloB - eloA) / 4.0));
 }
 
-// Score factor: blowout vs close game — 0.3 (close) to 1.2 (blowout)
-// FIX (was 0.6 floor): a one-point win like 11–10 could go either way and should
-// cost far less than a blowout. The old 0.6 floor over-punished tight matches.
-// New range: 0.3 (margin=0, impossible but asymptote) → 1.2 (full-margin blowout).
+// Score factor: blowout vs close game — 0.6 (close) to 1.2 (blowout)
 function getScoreFactor(winnerScore, loserScore, maxScore) {
   const margin = winnerScore - loserScore;
   const normalized = margin / maxScore;
-  return 0.3 + normalized * 0.9;
+  return 0.6 + normalized * 0.6;
 }
 
 // Type multiplier — unchanged
@@ -526,24 +514,22 @@ function getTypeMultiplier(type) {
   return 1.0; // competitive
 }
 
-// v4 Upset/Favorite factor — replaces flat underdog protection.
+// v3 Upset/Favorite factor — replaces flat underdog protection.
 // When the FAVORITE wins: compress the delta (they were expected to win).
-//   Starts compressing at a 1.0-point gap, floors at 0.50 for huge mismatches.
-//   FIX (was 0.30): raising the floor means a top player grinding mismatched wins
-//   still accumulates some meaningful ELO over a sequence of matches, preventing
-//   long-run rating deflation at the top of the ladder.
+//   Starts compressing at a 1.0-point gap, floors at 0.30 for huge mismatches.
+//   Effect: a 9.0 beating a 5.0 gains almost nothing. A 6.0 beating a 5.0 gains normally.
 // When the UNDERDOG wins (gap < 0): AMPLIFY the delta — this is an upset.
-//   Amplification scales with how big the gap was, caps at 1.8x (was 2.0x).
-//   Slightly tighter cap reduces extreme single-match volatility on big upsets.
+//   Amplification scales with how big the gap was, caps at 2.0x.
+//   Effect: a 5.0 beating an 8.0 triggers a major ELO swing both ways.
 // Zero-sum is preserved because we use a shared K (gain === loss in all cases).
 function getUnderdogFactor(winnerElo, loserElo) {
   const gap = winnerElo - loserElo; // positive = favorite won, negative = upset
   if (gap <= 0) {
     // Upset — amplify proportionally to how big the gap was
-    return Math.min(1.8, 1.0 + Math.abs(gap) * 0.35);
+    return Math.min(2.0, 1.0 + Math.abs(gap) * 0.35);
   }
-  // Favorite won — compress based on gap size, floor at 0.50
-  return Math.max(0.50, 1.0 - gap * 0.15);
+  // Favorite won — compress based on gap size, floor at 0.30
+  return Math.max(0.30, 1.0 - gap * 0.15);
 }
 
 // Doubles team strength: weighted average (55/45) toward the stronger player,
@@ -578,15 +564,12 @@ function calcSinglesElo(winnerElo, loserElo, winnerScore, loserScore, maxScore, 
   return { winnerDelta: delta, loserDelta: -delta };
 }
 
-// Doubles ELO calculation (v4)
-// FIX: previously, calcTeamStrength() used one carry-weight formula for expectedScore
-// but the individual delta split used a completely separate weight system. This created
-// a hidden disincentive to carry a weaker partner: their low ELO dragged down the team's
-// expected score (making wins worth less) while the strong player didn't get proportional
-// individual upside in the split. Now both steps derive weights from the same carry curve,
-// so carrying a weak partner is accurately priced in both directions.
+// Doubles ELO calculation (v2)
+// Team strength uses weighted average (55/45) instead of simple mean, so
+// carrying a weaker partner is properly reflected in expected score.
 // Shared K across all 4 players ensures zero-sum conservation.
 // Underdog factor applied at team level.
+// Individual distribution: weaker winners earn slightly more, stronger losers lose slightly more.
 function calcDoublesElo(team1Elos, team2Elos, winnerTeam, winnerScore, loserScore, maxScore, type, phases, winnerStreak) {
   const t1Strength = calcTeamStrength(team1Elos[0], team1Elos[1]);
   const t2Strength = calcTeamStrength(team2Elos[0], team2Elos[1]);
@@ -616,37 +599,26 @@ function calcDoublesElo(team1Elos, team2Elos, winnerTeam, winnerScore, loserScor
 
   const deltas = {};
 
-  // Helper: derive individual carry weights from the same formula as calcTeamStrength.
-  // The stronger player gets a smaller share of the win gain (they were expected to
-  // contribute more) and a larger share of the loss penalty. This mirrors the expected-
-  // score adjustment and eliminates the independent weight mismatch.
-  function carryWeights(elos) {
-    const gap = Math.abs(elos[0] - elos[1]);
-    let strongWeight;
-    if (gap < 0.5)      strongWeight = 0.50 + gap * 0.20;
-    else if (gap < 1.0) strongWeight = 0.60 + (gap - 0.5) * 0.10;
-    else                strongWeight = Math.min(0.70, 0.65 + (gap - 1.0) * 0.05);
-    // strongWeight is the team-strength weight for the stronger player.
-    // For individual GAIN split: weaker player earns the strong share (they over-delivered).
-    // For individual LOSS split: stronger player absorbs the strong share (they under-delivered).
-    const strongIdx = elos[0] >= elos[1] ? 0 : 1;
-    return { strongIdx, strongWeight };
-  }
-
-  // Winners: weaker player earns proportionally more (unified with carry curve)
-  const wCarry = carryWeights(winnerElos);
-  const wWeights = [0, 0];
-  wWeights[wCarry.strongIdx] = 1 - wCarry.strongWeight;       // strong winner earns less
-  wWeights[1 - wCarry.strongIdx] = wCarry.strongWeight;       // weak winner earns more
-  const wWeightSum = wWeights[0] + wWeights[1];
+  // Winners: weaker player earns more, scaled by actual partner gap
+  const wAvg = (winnerElos[0] + winnerElos[1]) / 2;
+  const wGap = Math.abs(winnerElos[0] - winnerElos[1]);
+  const wCarryScale = Math.min(0.4, wGap * 0.1);
+  const wWeights = winnerElos.map(elo => {
+    const rel = (elo - wAvg) / (Math.max(...winnerElos) - Math.min(...winnerElos) + 0.01);
+    return Math.max(0.6, 1.0 - rel * wCarryScale);
+  });
+  const wWeightSum = wWeights.reduce((s, w) => s + w, 0);
   winnerElos.forEach((_, i) => { deltas[`w${i}`] = totalDelta * (wWeights[i] / wWeightSum); });
 
-  // Losers: stronger player loses proportionally more (unified with carry curve)
-  const lCarry = carryWeights(loserElos);
-  const lWeights = [0, 0];
-  lWeights[lCarry.strongIdx] = lCarry.strongWeight;           // strong loser loses more
-  lWeights[1 - lCarry.strongIdx] = 1 - lCarry.strongWeight;  // weak loser loses less
-  const lWeightSum = lWeights[0] + lWeights[1];
+  // Losers: stronger player loses more, scaled by actual partner gap
+  const lAvg = (loserElos[0] + loserElos[1]) / 2;
+  const lGap = Math.abs(loserElos[0] - loserElos[1]);
+  const lCarryScale = Math.min(0.3, lGap * 0.1);
+  const lWeights = loserElos.map(elo => {
+    const rel = (elo - lAvg) / (Math.max(...loserElos) - Math.min(...loserElos) + 0.01);
+    return Math.max(0.6, 1.0 + rel * lCarryScale);
+  });
+  const lWeightSum = lWeights.reduce((s, w) => s + w, 0);
   loserElos.forEach((_, i) => { deltas[`l${i}`] = -(totalDelta * (lWeights[i] / lWeightSum)); });
 
   return deltas;
@@ -679,38 +651,8 @@ async function recalcEloFromLedger(userId) {
 }
 
 // Apply elo transaction (never overwrite, always append)
-// FIX (mean reversion): before writing the match delta, apply a small inactivity
-// decay toward ELO_BASE. Rate: 2% of the gap per week inactive, capped at 10% total.
-// This prevents a player who hit 8.0 six months ago from holding that rating
-// indefinitely without playing — they'll slowly drift back toward 5.0, so when
-// they return rusty they don't tank opponents before their rating has adjusted.
-// Each reversion is written as its own ledger entry for full auditability.
 async function applyEloTransaction(userId, matchId, delta, reason = '') {
-  let before = await getPlayerElo(userId);
-
-  // Mean reversion: check inactivity and apply drift toward base
-  try {
-    const pdata = await getPlayerData(userId);
-    const lastMatch = pdata?.lastMatchAt || null;
-    if (lastMatch && before !== ELO_BASE) {
-      const weeksInactive = (Date.now() - lastMatch) / (7 * 24 * 60 * 60 * 1000);
-      if (weeksInactive >= 1) {
-        // 2% of gap per week, capped at 10% total reversion per match event
-        const reversionRate = Math.min(0.10, weeksInactive * 0.02);
-        const gap = ELO_BASE - before;
-        const reversionDelta = gap * reversionRate;
-        if (Math.abs(reversionDelta) >= 0.005) {
-          const revAfter = clampElo(before + reversionDelta);
-          const actualRev = revAfter - before;
-          const revTx = { player: userId, matchId: `reversion_${matchId}`, delta: actualRev, before, after: revAfter, timestamp: Date.now(), valid: true, reason: 'inactivity_reversion' };
-          await dbPush(`eloLedger/${userId}`, revTx);
-          await dbUpdate(`players/${userId}`, { elo: revAfter });
-          before = revAfter; // use reverted value as the baseline for the match delta
-        }
-      }
-    }
-  } catch { /* reversion is best-effort; never block a match */ }
-
+  const before = await getPlayerElo(userId);
   const after = clampElo(before + delta);
   const actualDelta = after - before;
   const tx = { player: userId, matchId, delta: actualDelta, before, after, timestamp: Date.now(), valid: true, reason };
@@ -773,7 +715,7 @@ async function init() {
 
 function updateHeaderElo() {
   const p = currentUser?.playerData;
-  const inPlacement = !p || (p.ratedGamesPlayed || 0) < PLACEMENT_GAMES;
+  const inPlacement = !p || (p.gamesPlayed || 0) < PLACEMENT_GAMES;
   const elo = p?.elo;
   document.getElementById('header-elo').textContent = inPlacement ? '—' : (elo !== undefined && elo !== null ? fmtElo(elo) : '—');
 }
@@ -836,6 +778,8 @@ function renderAuth(mode = 'login') {
 
 // ===================== BAN SCREEN =====================
 function renderBanScreen(reason) {
+  // innerHTML replaces the entire DOM, so element lookups after this point would crash.
+  // No need to hide header/nav/content — they're already gone.
   document.body.innerHTML = `
     <div class="ban-screen">
       <div class="icon">🚫</div>
@@ -845,11 +789,6 @@ function renderBanScreen(reason) {
       <p style="font-size:.8rem;color:var(--text-muted);margin-top:20px">Contact an administrator for assistance.</p>
     </div>
   `;
-  
-  // Clean up app state
-  document.getElementById('main-header').style.display = 'none';
-  document.getElementById('mobile-nav').style.display = 'none';
-  document.getElementById('page-content').innerHTML = '';
 }
 
 async function doLogin(e) {
@@ -892,7 +831,7 @@ async function doSignup(e) {
     const res = await dbPush('users', userData);
     const id = res.name;
     // Init player record
-    await dbSet(`players/${id}`, { elo: ELO_BASE, gamesPlayed: 0, ratedGamesPlayed: 0, wins: 0, losses: 0, compStreak: 0, casualStreak: 0, compStreakBest: 0, casualStreakBest: 0, singlesElo: ELO_BASE, doublesElo: ELO_BASE, phase: 'placement', uncertainty: 1.0, lastMatchAt: null });
+    await dbSet(`players/${id}`, { elo: ELO_BASE, gamesPlayed: 0, wins: 0, losses: 0, compStreak: 0, casualStreak: 0, compStreakBest: 0, casualStreakBest: 0, singlesElo: ELO_BASE, doublesElo: ELO_BASE, phase: 'placement', uncertainty: 1.0 });
     await emailjs.send("service_lytp94p", "template_gyr9kcp", { to_email: email, username: name, otp_code: code });
     saveSession({ id, ...userData, playerData: { elo: ELO_BASE, gamesPlayed: 0, wins: 0, losses: 0 } });
     showToast('Account created! Check your email.', 'success');
@@ -1464,8 +1403,8 @@ async function showNewMatchModal() {
         p1Before = loadedPlayers[p1Id] || ELO_BASE;
         p2Before = loadedPlayers[p2Id] || ELO_BASE;
         const p1data = await getPlayerData(p1Id); const p2data = await getPlayerData(p2Id);
-        const p1phase = getPlayerPhase(p1data?.ratedGamesPlayed || 0);
-        const p2phase = getPlayerPhase(p2data?.ratedGamesPlayed || 0);
+        const p1phase = getPlayerPhase(p1data?.gamesPlayed || 0);
+        const p2phase = getPlayerPhase(p2data?.gamesPlayed || 0);
 
         const winnerId = winner === 1 ? p1Id : p2Id;
         const loserId = winner === 1 ? p2Id : p1Id;
@@ -1493,7 +1432,7 @@ async function showNewMatchModal() {
 
         const t1elos = t1.map(id => playerElos[id]);
         const t2elos = t2.map(id => playerElos[id]);
-        const phases = [...t1.map(id => getPlayerPhase(playerDatas[id]?.ratedGamesPlayed || 0)), ...t2.map(id => getPlayerPhase(playerDatas[id]?.ratedGamesPlayed || 0))];
+        const phases = [...t1.map(id => getPlayerPhase(playerDatas[id]?.gamesPlayed || 0)), ...t2.map(id => getPlayerPhase(playerDatas[id]?.gamesPlayed || 0))];
         const winnerTeamIdx = winner - 1;
         const winnerIds = winner === 1 ? t1 : t2;
         const winnerData0 = playerDatas[winnerIds[0]];
@@ -1533,25 +1472,19 @@ async function showNewMatchModal() {
         await applyEloTransaction(id, matchId, delta, `Match ${matchId}`);
         const pdata = await getPlayerData(id);
         const won = isDoubles ? (winner === 1 ? matchConfig.team1.includes(id) : matchConfig.team2.includes(id)) : (winner === 1 ? id === matchConfig.player1 : id === matchConfig.player2);
-        const isCasual = matchConfig.mode === 'casual';
-        const compStreakEligible = !isCasual;
-        // ratedGamesPlayed only increments for non-casual matches — used for phase.
-        // gamesPlayed increments for all matches — used for W/L display.
-        const newRatedGames = (pdata?.ratedGamesPlayed || 0) + (isCasual ? 0 : 1);
+        const compStreakEligible = matchConfig.mode !== 'casual';
         const updates = {
           elo: elosAfter[id],
           gamesPlayed: (pdata?.gamesPlayed || 0) + 1,
-          ratedGamesPlayed: newRatedGames,
           wins: (pdata?.wins || 0) + (won ? 1 : 0),
           losses: (pdata?.losses || 0) + (won ? 0 : 1),
-          phase: getPlayerPhase(newRatedGames),
-          lastMatchAt: Date.now(),
+          phase: getPlayerPhase((pdata?.gamesPlayed || 0) + 1),
         };
         if (compStreakEligible) {
           updates.compStreak = won ? (pdata?.compStreak || 0) + 1 : 0;
           updates.compStreakBest = Math.max(pdata?.compStreakBest || 0, updates.compStreak);
         }
-        if (isCasual) {
+        if (matchConfig.mode === 'casual') {
           updates.casualStreak = won ? (pdata?.casualStreak || 0) + 1 : 0;
           updates.casualStreakBest = Math.max(pdata?.casualStreakBest || 0, updates.casualStreak);
         }
@@ -1660,7 +1593,7 @@ async function renderLeaderboard() {
           `<div class="card"><div style="padding:0">
             ${list.map((p, i) => {
           const phase = p.phase || 'placement';
-          const phaseBadge = (phase === 'placement' && timeFilter === 'all') ? `<span class="badge badge-yellow" style="font-size:.55rem">Placement ${Math.min(p.ratedGamesPlayed || 0, PLACEMENT_GAMES)}/${PLACEMENT_GAMES}</span>` :
+          const phaseBadge = (phase === 'placement' && timeFilter === 'all') ? `<span class="badge badge-yellow" style="font-size:.55rem">Placement ${Math.min(p.gamesPlayed || 0, PLACEMENT_GAMES)}/${PLACEMENT_GAMES}</span>` :
             (phase === 'volatile' && timeFilter === 'all') ? `<span class="badge badge-blue" style="font-size:.55rem">Rising</span>` : '';
           const rankClass = phase === 'placement' && timeFilter === 'all' ? '' : (i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '');
           const rankDisp = phase === 'placement' && timeFilter === 'all' ? '—' : (i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1);
@@ -1779,7 +1712,7 @@ async function renderProfile(userId) {
 
     const ledger = ledgerData ? Object.entries(ledgerData).map(([id, t]) => ({ id, ...t })).sort((a, b) => b.timestamp - a.timestamp) : [];
     const phase = p.phase || 'placement';
-    const phaseLabel = phase === 'placement' ? `Placement (${Math.min(p.ratedGamesPlayed || 0, PLACEMENT_GAMES)}/${PLACEMENT_GAMES} rated games)` : phase === 'volatile' ? 'Rising (calibrating)' : 'Stable';
+    const phaseLabel = phase === 'placement' ? `Placement (${Math.min(p.gamesPlayed || 0, PLACEMENT_GAMES)}/${PLACEMENT_GAMES})` : phase === 'volatile' ? 'Rising (calibrating)' : 'Stable';
 
     // ELO history for chart
     const eloHistory = ledger.filter(t => t.valid !== false).reverse().reduce((acc, t) => {
@@ -2220,11 +2153,9 @@ async function renderRules() {
     </ul>
 
     <h2>ELO System</h2>
-    <p>HSR uses a custom ELO system ranging from 0.00 to 10.00. New players begin placement at 5.00 for 3 <strong>rated</strong> games (competitive, semi-competitive, or tournament — casual matches don't count toward placement), then enter the rated ladder. Ratings adjust based on opponent strength, score margin, match mode, and an upset/favorite factor. Streaks are tracked for display but do not affect ELO — your rating reflects sustained performance, not momentum.</p>
-    <p>The system is strictly zero-sum: every point gained by one player is lost by another. Doubles uses a weighted team strength formula (55/45 toward the stronger player) to better reflect individual contribution, and the same carry weights govern both the team's expected score and each player's individual share of the delta.</p>
-    <p><strong>Score margin matters:</strong> a one-point win earns much less than a blowout. The score factor ranges from 0.3× (1-point margin) to 1.2× (full-margin blowout), so lucky narrow wins don't swing the ladder the same way dominant performances do.</p>
+    <p>HSR uses a custom ELO system ranging from 0.00 to 10.00. New players begin placement at 5.00 for 3 games, then enter the rated ladder. Ratings adjust based on opponent strength, score margin, match mode, and an upset/favorite factor. Streaks are tracked for display but do not affect ELO — your rating reflects sustained performance, not momentum.</p>
+    <p>The system is strictly zero-sum: every point gained by one player is lost by another. Doubles uses a weighted team strength formula (55/45 toward the stronger player) to better reflect individual contribution.</p>
     <p><strong>The most ELO is on the line when you play someone near your own rating.</strong> Beating a player far below you earns almost nothing — the system expects you to win. But if a lower-rated player pulls off an upset, both sides see a large swing. This rewards competitive games and discourages farming weak opponents.</p>
-    <p><strong>Inactivity decay:</strong> if you haven't played in a week or more, your rating will slowly drift back toward 5.0 (2% of the gap per week, capped at 10% per match event). This prevents stale ratings from distorting the ladder when players return after a long break.</p>
     <ul>
       <li><strong>10.0</strong> — Near impossible; requires sustained dominance over top players.</li>
       <li><strong>8.0+</strong> — Elite tier; rarely loses to anyone.</li>
@@ -2509,7 +2440,6 @@ function drawEloDistChart(users, players) {
   const canvas = document.getElementById('admin-elo-dist-chart');
   if (!canvas) return;
   if (canvas._chart) canvas._chart.destroy();
-  const buckets = [0,1,2,3,4,5,6,7,8,9,10];
   const counts = new Array(10).fill(0);
   const labels = ['0–1','1–2','2–3','3–4','4–5','5–6','6–7','7–8','8–9','9–10'];
   for (const [uid, p] of Object.entries(players)) {

@@ -480,21 +480,23 @@ function getPlayerPhase(gamesPlayed) {
 }
 
 // K-factor based on phase and elo (diminishing returns at high elo)
-// v2: 1.5x the original base values for more meaningful movement per match
+// v3: doubled base values for meaningful per-match movement
 function getKFactor(phase, currentElo) {
   let base;
-  if (phase === 'placement') base = 0.9;    // was 0.6
-  else if (phase === 'volatile') base = 0.45; // was 0.3
-  else base = 0.225;                          // was 0.15
-  // Diminishing returns at higher elos — same curve, higher ceiling
+  if (phase === 'placement') base = 1.8;   // was 0.9 — big swings during calibration
+  else if (phase === 'volatile') base = 0.9; // was 0.45
+  else base = 0.45;                          // was 0.225
+  // Diminishing returns above 6.0 so top players must keep earning it
   const diminish = Math.max(0.3, 1 - Math.pow(Math.max(0, currentElo - 6) / 6, 1.5) * 0.7);
   return base * diminish;
 }
 
 // Expected win probability using logistic function
-// Divisor = 2.0 so a 2-point gap ≈ 73% win probability on the 0–10 scale
+// v3: Divisor = 4.0 (was 2.0). A 2-point gap is now ~76% (was ~91%) so
+// high-ELO players must beat weaker opponents consistently to gain anything,
+// and small gaps feel meaningfully competitive.
 function expectedScore(eloA, eloB) {
-  return 1 / (1 + Math.pow(10, (eloB - eloA) / 2.0));
+  return 1 / (1 + Math.pow(10, (eloB - eloA) / 4.0));
 }
 
 // Score factor: blowout vs close game — 0.6 (close) to 1.2 (blowout)
@@ -504,7 +506,7 @@ function getScoreFactor(winnerScore, loserScore, maxScore) {
   return 0.6 + normalized * 0.6;
 }
 
-// Type multiplier — v2 adds semi-competitive at 0.75x
+// Type multiplier — unchanged
 function getTypeMultiplier(type) {
   if (type === 'casual') return 0.5;
   if (type === 'semi-competitive') return 0.75;
@@ -512,14 +514,22 @@ function getTypeMultiplier(type) {
   return 1.0; // competitive
 }
 
-// Underdog protection (v2): when the winner is a heavy favorite, compress the
-// delta so heavy underdogs aren't punished repeatedly for expected losses.
-// Factor starts compressing at a 0.75-point gap, floors at 0.40.
-// Applied symmetrically to both winner gain and loser loss — stays zero-sum.
+// v3 Upset/Favorite factor — replaces flat underdog protection.
+// When the FAVORITE wins: compress the delta (they were expected to win).
+//   Starts compressing at a 1.0-point gap, floors at 0.30 for huge mismatches.
+//   Effect: a 9.0 beating a 5.0 gains almost nothing. A 6.0 beating a 5.0 gains normally.
+// When the UNDERDOG wins (gap < 0): AMPLIFY the delta — this is an upset.
+//   Amplification scales with how big the gap was, caps at 2.0x.
+//   Effect: a 5.0 beating an 8.0 triggers a major ELO swing both ways.
+// Zero-sum is preserved because we use a shared K (gain === loss in all cases).
 function getUnderdogFactor(winnerElo, loserElo) {
-  const gap = winnerElo - loserElo;
-  if (gap <= 0.75) return 1.0;
-  return Math.max(0.40, 1.0 - (gap - 0.75) * 0.25);
+  const gap = winnerElo - loserElo; // positive = favorite won, negative = upset
+  if (gap <= 0) {
+    // Upset — amplify proportionally to how big the gap was
+    return Math.min(2.0, 1.0 + Math.abs(gap) * 0.35);
+  }
+  // Favorite won — compress based on gap size, floor at 0.30
+  return Math.max(0.30, 1.0 - gap * 0.15);
 }
 
 // Doubles team strength: weighted average (55/45) toward the stronger player,
@@ -2116,14 +2126,16 @@ async function renderRules() {
     </ul>
 
     <h2>ELO System</h2>
-    <p>HSR uses a custom ELO system ranging from 0.00 to 10.00. New players begin placement at 5.00 for 3 games, then enter the rated ladder. Ratings adjust based on opponent strength, score margin, match mode, and a skill-gap protection factor. Streaks are tracked for display but do not affect ELO — your rating reflects sustained performance, not momentum.</p>
-    <p>The system is strictly zero-sum: every point gained by one player is lost by another. Doubles uses a weighted team strength formula (55/45 toward the stronger player) to better reflect individual contribution. When there's a large ELO gap, losses for the underdog are modestly compressed to prevent repeated mismatched games from being overly punishing.</p>
+    <p>HSR uses a custom ELO system ranging from 0.00 to 10.00. New players begin placement at 5.00 for 3 games, then enter the rated ladder. Ratings adjust based on opponent strength, score margin, match mode, and an upset/favorite factor. Streaks are tracked for display but do not affect ELO — your rating reflects sustained performance, not momentum.</p>
+    <p>The system is strictly zero-sum: every point gained by one player is lost by another. Doubles uses a weighted team strength formula (55/45 toward the stronger player) to better reflect individual contribution.</p>
+    <p><strong>The most ELO is on the line when you play someone near your own rating.</strong> Beating a player far below you earns almost nothing — the system expects you to win. But if a lower-rated player pulls off an upset, both sides see a large swing. This rewards competitive games and discourages farming weak opponents.</p>
     <ul>
       <li><strong>10.0</strong> — Near impossible; requires sustained dominance over top players.</li>
-      <li><strong>9.0+</strong> — Elite tier; virtually never loses.</li>
-      <li><strong>8.0+</strong> — Very strong; occasional losses only.</li>
-      <li><strong>5.0</strong> — Average rated player.</li>
-      <li><strong>5.0-</strong> — Worse then average.</li>
+      <li><strong>8.0+</strong> — Elite tier; rarely loses to anyone.</li>
+      <li><strong>6.0–8.0</strong> — Strong; consistently beats average players.</li>
+      <li><strong>5.0</strong> — Average rated player (starting point).</li>
+      <li><strong>3.0–5.0</strong> — Developing; frequent losses against stronger opponents.</li>
+      <li><strong>Below 3.0</strong> — Early-ladder; major upsets can rocket you back up.</li>
     </ul>
 
     <h2>Disputes</h2>

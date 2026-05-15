@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HSR Transparency HQ</title>
+<meta name="theme-color" content="#0a0a00">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080800;
+  --bg-card:#0f0f04;
+  --bg-card-hover:#161608;
+  --bg-input:#121208;
+  --bg-surface:#0d0d02;
+  --border:#2a2a0a;
+  --border-light:#3a3a14;
+  --border-focus:#f5c800;
+  --text:#f0f0e0;
+  --text-secondary:#8a8a60;
+  --text-muted:#4a4a30;
+  --yellow:#f5c800;
+  --yellow-dim:rgba(245,200,0,0.1);
+  --yellow-glow:rgba(245,200,0,0.25);
+  --red:#ff3520;
+  --red-dim:rgba(255,53,32,0.12);
+  --green:#39d353;
+  --green-dim:rgba(57,211,83,0.1);
+  --blue:#4a9eff;
+  --blue-dim:rgba(74,158,255,0.1);
+  --orange:#ff8c00;
+  --orange-dim:rgba(255,140,0,0.1);
+  --purple:#a855f7;
+  --purple-dim:rgba(168,85,247,0.1);
+  --radius:10px;
+  --font:'Barlow',system-ui,sans-serif;
+  --display:'Bebas Neue',system-ui,sans-serif;
+  --mono:'JetBrains Mono',monospace;
+}
+html{font-size:16px;scroll-behavior:smooth}
+body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased}
+body::before{content:'';position:fixed;top:0;left:0;right:0;height:500px;background:radial-gradient(ellipse 60% 30% at 50% -5%,rgba(74,158,255,0.08) 0%,transparent 70%);pointer-events:none;z-index:0}
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.6}
+a{color:var(--blue);text-decoration:none}
+button{font-family:var(--font);cursor:pointer;border:none;outline:none;transition:all .18s}
+input,textarea,select{font-family:var(--font);background:var(--bg-input);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:.9rem;width:100%;transition:border-color .2s,box-shadow .2s}
+input:focus,textarea:focus,select:focus{border-color:var(--blue);outline:none;box-shadow:0 0 0 3px rgba(74,158,255,0.15)}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238a8a60' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-muted)}
+
+#app{display:flex;flex-direction:column;min-height:100vh;position:relative;z-index:1}
+header{position:sticky;top:0;z-index:200;background:rgba(8,8,0,0.95);border-bottom:1px solid var(--border);backdrop-filter:blur(20px)}
+.header-inner{max-width:1400px;margin:0 auto;padding:0 20px;height:60px;display:flex;align-items:center;gap:14px}
+.logo{font-family:var(--display);font-size:1.8rem;letter-spacing:.04em;color:var(--blue);display:flex;align-items:center;gap:10px;flex-shrink:0;text-shadow:0 0 20px rgba(74,158,255,0.4)}
+.logo-icon{font-size:1.3rem}
+.logo-sub{font-family:var(--font);font-size:.55rem;font-weight:800;color:var(--text-muted);letter-spacing:.15em;text-transform:uppercase;margin-left:2px;align-self:flex-end;margin-bottom:6px}
+nav{display:flex;gap:2px;margin-left:8px}
+nav button{padding:7px 13px;border-radius:7px;font-size:.78rem;font-weight:700;color:var(--text-secondary);background:transparent;transition:all .18s;border:1px solid transparent;text-transform:uppercase;letter-spacing:.06em}
+nav button:hover{color:var(--text);background:rgba(74,158,255,0.06)}
+nav button.active{color:var(--blue);background:var(--blue-dim);border-color:rgba(74,158,255,0.2)}
+
+main{flex:1;max-width:1400px;margin:0 auto;padding:24px 20px;width:100%}
+.page-title{font-family:var(--display);font-size:2.4rem;letter-spacing:.06em;color:var(--text);margin-bottom:8px;display:flex;align-items:center;gap:12px}
+.page-title .accent{color:var(--blue)}
+.page-subtitle{font-size:.9rem;color:var(--text-secondary);margin-bottom:24px;max-width:700px}
+
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:border-color .2s}
+.card:hover{border-color:var(--border-light)}
+.card-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-header-title{font-family:var(--display);font-size:1.1rem;letter-spacing:.06em;color:var(--text)}
+.card-body{padding:20px}
+
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap}
+.badge-blue{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(74,158,255,0.25)}
+.badge-yellow{background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,200,0,0.25)}
+.badge-green{background:var(--green-dim);color:var(--green)}
+.badge-red{background:var(--red-dim);color:var(--red)}
+.badge-purple{background:var(--purple-dim);color:var(--purple)}
+.badge-muted{background:rgba(255,255,255,0.04);color:var(--text-muted)}
+
+.tab-bar{display:flex;gap:1px;border-bottom:1px solid var(--border);margin-bottom:20px;overflow-x:auto}
+.tab-bar button{padding:9px 18px;font-size:.75rem;font-weight:800;color:var(--text-muted);background:transparent;border-bottom:2px solid transparent;transition:all .18s;margin-bottom:-1px;white-space:nowrap;text-transform:uppercase;letter-spacing:.06em}
+.tab-bar button:hover{color:var(--text)}
+.tab-bar button.active{color:var(--blue);border-bottom-color:var(--blue)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 18px;border-radius:8px;font-size:.82rem;font-weight:800;transition:all .18s;white-space:nowrap;border:1px solid transparent;font-family:var(--font);text-transform:uppercase;letter-spacing:.05em}
+.btn-primary{background:var(--blue);color:var(--black);box-shadow:0 0 16px rgba(74,158,255,0.2)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(74,158,255,0.4)}
+.btn-secondary{background:var(--bg-card);color:var(--text);border-color:var(--border)}
+.btn-secondary:hover{background:var(--bg-card-hover);border-color:var(--border-light)}
+.btn-sm{padding:5px 10px;font-size:.72rem}
+
+.spinner{width:22px;height:22px;border:2px solid var(--border-light);border-top-color:var(--blue);border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-page{display:flex;align-items:center;justify-content:center;height:300px;flex-direction:column;gap:14px;color:var(--text-muted);font-size:.85rem}
+.empty-state{text-align:center;padding:60px 20px;color:var(--text-muted)}
+.empty-state .emoji{font-size:3rem;margin-bottom:12px;display:block}
+.empty-state h3{font-family:var(--display);font-size:1.6rem;letter-spacing:.06em;color:var(--text-secondary);margin-bottom:6px}
+
+/* Formula display */
+.formula-box{background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:16px;font-family:var(--mono);font-size:.85rem;overflow-x:auto;margin:12px 0}
+.formula-box .keyword{color:var(--purple);font-weight:700}
+.formula-box .number{color:var(--yellow)}
+.formula-box .var{color:var(--blue)}
+.formula-box .op{color:var(--text-muted)}
+.formula-box .comment{color:var(--text-muted);font-style:italic}
+.formula-label{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:6px}
+
+.math-step{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;background:var(--bg-surface);border-radius:8px;border:1px solid var(--border);margin-bottom:8px}
+.math-step-num{width:28px;height:28px;border-radius:50%;background:var(--blue-dim);color:var(--blue);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.75rem;flex-shrink:0}
+.math-step-content{flex:1}
+.math-step-label{font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:4px}
+.math-step-formula{font-family:var(--mono);font-size:.88rem;color:var(--text)}
+.math-step-result{font-family:var(--mono);font-size:.92rem;font-weight:700;margin-top:4px}
+.math-step-result.pos{color:var(--green)}
+.math-step-result.neg{color:var(--red)}
+.math-step-result.neutral{color:var(--yellow)}
+
+.match-selector{display:grid;grid-template-columns:1fr 300px;gap:20px}
+@media(max-width:900px){.match-selector{grid-template-columns:1fr}}
+.match-list{max-height:500px;overflow-y:auto}
+.match-item{padding:12px 16px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer;transition:all .18s;background:var(--bg-card)}
+.match-item:hover{border-color:rgba(74,158,255,0.3);background:var(--bg-card-hover)}
+.match-item.selected{border-color:var(--blue);background:var(--blue-dim)}
+.match-item-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.match-item-players{font-weight:700;font-size:.88rem}
+.match-item-score{font-family:var(--mono);font-size:.85rem;color:var(--text-secondary)}
+.match-item-meta{font-size:.7rem;color:var(--text-muted);display:flex;gap:8px;flex-wrap:wrap}
+
+.player-search-results{max-height:300px;overflow-y:auto}
+.player-item{padding:10px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:all .18s;background:var(--bg-card);display:flex;align-items:center;gap:10px}
+.player-item:hover{border-color:rgba(74,158,255,0.3);background:var(--bg-card-hover)}
+.player-item.selected{border-color:var(--blue);background:var(--blue-dim)}
+.player-item-name{font-weight:700;flex:1}
+.player-item-elo{font-family:var(--mono);font-size:.85rem;color:var(--yellow)}
+
+.ledger-table{width:100%;border-collapse:collapse;font-size:.8rem}
+.ledger-table th{text-align:left;font-size:.62rem;text-transform:uppercase;letter-spacing:.12em;color:var(--text-muted);padding:9px 12px;border-bottom:1px solid var(--border);font-weight:800;position:sticky;top:0;background:var(--bg-card)}
+.ledger-table td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+.ledger-table tr:hover td{background:var(--bg-card-hover)}
+.ledger-table .mono{font-family:var(--mono)}
+
+.section-divider{height:1px;background:var(--border);margin:24px 0}
+
+.info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+.info-card{background:var(--bg-surface);border:1px solid var(--border);border-radius:8px;padding:14px}
+.info-card-label{font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:4px}
+.info-card-value{font-family:var(--display);font-size:1.6rem;letter-spacing:.04em}
+
+.elo-delta-pos{color:var(--green);font-family:var(--mono);font-weight:700}
+.elo-delta-neg{color:var(--red);font-family:var(--mono);font-weight:700}
+
+.page{animation:pageIn .2s ease}
+@keyframes pageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+@media(max-width:640px){
+  main{padding:14px 12px}
+  nav{display:none}
+  .match-selector{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <div class="header-inner">
+      <div class="logo"><span class="logo-icon">📊</span>HSR<span class="logo-sub">Transparency HQ</span></div>
+      <nav id="main-nav">
+        <button data-page="match-math" class="active">Match Math</button>
+        <button data-page="player-history">Player History</button>
+        <button data-page="ledger">ELO Ledger</button>
+        <button data-page="formulas">Formulas</button>
+      </nav>
+    </div>
+  </header>
+
+  <main id="page-content"></main>
+</div>
+
+<script>
+'use strict';
+
+// ===================== FIREBASE =====================
+const DB = 'https://hackleyspikeball-default-rtdb.firebaseio.com';
+async function dbGet(p) { const r = await fetch(`${DB}/${p}.json`); if (!r.ok) throw new Error('DB read fail'); return r.json(); }
+
+// ===================== UTILS =====================
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function fmtElo(e) { return (e || 0).toFixed(2); }
+function timeAgo(ts) { const s = Math.floor((Date.now() - ts) / 1000); if (s < 60) return 'just now'; if (s < 3600) return Math.floor(s / 60) + 'm ago'; if (s < 86400) return Math.floor(s / 3600) + 'h ago'; return Math.floor(s / 86400) + 'd ago'; }
+function initials(n) { return (n || '?').trim().split(/\s+/).map(w => w[0] || '').join('').toUpperCase().slice(0, 2) || '?'; }
+function avatarColor(n) { const c = ['#f5c800', '#4a9eff', '#39d353', '#ff8c00', '#ff3520', '#a855f7', '#06b6d4']; let h = 0; for (let x of (n || 'U')) h = (h + x.charCodeAt(0)) % c.length; return c[h]; }
+
+// ===================== ELO ENGINE (EXPOSED) =====================
+const ELO_BASE = 5.0;
+const ELO_MAX = 10.0;
+const ELO_MIN = 0.0;
+const PLACEMENT_GAMES = 3;
+const HIGH_VOL_GAMES = 10;
+
+function getPlayerPhase(gamesPlayed) {
+  if (gamesPlayed < PLACEMENT_GAMES) return 'placement';
+  if (gamesPlayed < PLACEMENT_GAMES + HIGH_VOL_GAMES) return 'volatile';
+  return 'stable';
+}
+
+function getKFactor(phase, currentElo) {
+  let base;
+  if (phase === 'placement') base = 1.8;
+  else if (phase === 'volatile') base = 0.9;
+  else base = 0.45;
+  const diminish = Math.max(0.3, 1 - Math.pow(Math.max(0, currentElo - 6) / 6, 1.5) * 0.7);
+  return base * diminish;
+}
+
+function expectedScore(eloA, eloB) {
+  return 1 / (1 + Math.pow(10, (eloB - eloA) / 4.0));
+}
+
+function getScoreFactor(winnerScore, loserScore, maxScore) {
+  const margin = winnerScore - loserScore;
+  const normalized = margin / maxScore;
+  return 0.6 + normalized * 0.6;
+}
+
+function getTypeMultiplier(type) {
+  if (type === 'casual') return 0.5;
+  if (type === 'semi-competitive') return 0.75;
+  if (type === 'tournament') return 1.25;
+  return 1.0;
+}
+
+function getUnderdogFactor(winnerElo, loserElo) {
+  const gap = winnerElo - loserElo;
+  if (gap <= 0) return Math.min(2.0, 1.0 + Math.abs(gap) * 0.35);
+  return Math.max(0.30, 1.0 - gap * 0.15);
+}
+
+function calcTeamStrength(eloA, eloB) {
+  const gap = Math.abs(eloA - eloB);
+  let strongWeight;
+  if (gap < 0.5)      strongWeight = 0.50 + gap * 0.20;
+  else if (gap < 1.0) strongWeight = 0.60 + (gap - 0.5) * 0.10;
+  else                strongWeight = Math.min(0.70, 0.65 + (gap - 1.0) * 0.05);
+  const [high, low] = eloA >= eloB ? [eloA, eloB] : [eloB, eloA];
+  return high * strongWeight + low * (1 - strongWeight);
+}
+
+function calcSinglesEloDetailed(winnerElo, loserElo, winnerScore, loserScore, maxScore, type, winnerPhase, loserPhase) {
+  const exp = expectedScore(winnerElo, loserElo);
+  const kW = getKFactor(winnerPhase, winnerElo);
+  const kL = getKFactor(loserPhase, loserElo);
+  const k = (kW + kL) / 2;
+  const scoreFactor = getScoreFactor(winnerScore, loserScore, maxScore);
+  const typeMult = getTypeMultiplier(type);
+  const underdogFactor = getUnderdogFactor(winnerElo, loserElo);
+  
+  const delta = Math.max(0, k * (1 - exp) * scoreFactor * typeMult * underdogFactor);
+  
+  return {
+    expectedScore: exp,
+    kWinner: kW,
+    kLoser: kL,
+    sharedK: k,
+    scoreFactor,
+    typeMultiplier: typeMult,
+    underdogFactor,
+    delta,
+    steps: [
+      { label: 'Expected Score (E)', formula: `1 / (1 + 10^(${loserElo.toFixed(2)} - ${winnerElo.toFixed(2)}) / 4.0)`, result: exp.toFixed(4) },
+      { label: 'K-Factor (Winner)', formula: `base × diminish (phase: ${winnerPhase})`, result: kW.toFixed(4) },
+      { label: 'K-Factor (Loser)', formula: `base × diminish (phase: ${loserPhase})`, result: kL.toFixed(4) },
+      { label: 'Shared K', formula: `(${kW.toFixed(4)} + ${kL.toFixed(4)}) / 2`, result: k.toFixed(4) },
+      { label: 'Score Factor', formula: `0.6 + ((${winnerScore} - ${loserScore}) / ${maxScore}) × 0.6`, result: scoreFactor.toFixed(4) },
+      { label: 'Type Multiplier', formula: `${type} = ${typeMult}`, result: typeMult.toFixed(2) },
+      { label: 'Underdog Factor', formula: `gap = ${winnerElo.toFixed(2)} - ${loserElo.toFixed(2)} = ${(winnerElo - loserElo).toFixed(2)}`, result: underdogFactor.toFixed(4) },
+      { label: 'Final Delta', formula: `${k.toFixed(4)} × (1 - ${exp.toFixed(4)}) × ${scoreFactor.toFixed(4)} × ${typeMult} × ${underdogFactor.toFixed(4)}`, result: delta.toFixed(4) }
+    ]
+  };
+}
+
+function calcDoublesEloDetailed(team1Elos, team2Elos, winnerTeam, winnerScore, loserScore, maxScore, type, phases) {
+  const t1Strength = calcTeamStrength(team1Elos[0], team1Elos[1]);
+  const t2Strength = calcTeamStrength(team2Elos[0], team2Elos[1]);
+  const winnerStrength = winnerTeam === 0 ? t1Strength : t2Strength;
+  const loserStrength = winnerTeam === 0 ? t2Strength : t1Strength;
+  
+  const exp = expectedScore(winnerStrength, loserStrength);
+  const scoreFactor = getScoreFactor(winnerScore, loserScore, maxScore);
+  const typeMult = getTypeMultiplier(type);
+  const underdogFactor = getUnderdogFactor(winnerStrength, loserStrength);
+  
+  const allKs = [
+    getKFactor(phases[0], team1Elos[0]),
+    getKFactor(phases[1], team1Elos[1]),
+    getKFactor(phases[2], team2Elos[0]),
+    getKFactor(phases[3], team2Elos[1]),
+  ];
+  const sharedK = allKs.reduce((s, k) => s + k, 0) / 4;
+  
+  const totalDelta = Math.max(0, sharedK * (1 - exp) * scoreFactor * typeMult * underdogFactor);
+  
+  return {
+    team1Strength: t1Strength,
+    team2Strength: t2Strength,
+    winnerStrength,
+    loserStrength,
+    expectedScore: exp,
+    scoreFactor,
+    typeMultiplier: typeMult,
+    underdogFactor,
+    sharedK,
+    totalDelta,
+    allKs,
+    steps: [
+      { label: 'Team 1 Strength', formula: `weighted avg of ${team1Elos[0].toFixed(2)} & ${team1Elos[1].toFixed(2)}`, result: t1Strength.toFixed(4) },
+      { label: 'Team 2 Strength', formula: `weighted avg of ${team2Elos[0].toFixed(2)} & ${team2Elos[1].toFixed(2)}`, result: t2Strength.toFixed(4) },
+      { label: 'Expected Score', formula: `1 / (1 + 10^(${loserStrength.toFixed(2)} - ${winnerStrength.toFixed(2)}) / 4.0)`, result: exp.toFixed(4) },
+      { label: 'Shared K', formula: `avg of 4 players' K-factors`, result: sharedK.toFixed(4) },
+      { label: 'Score Factor', formula: `0.6 + ((${winnerScore} - ${loserScore}) / ${maxScore}) × 0.6`, result: scoreFactor.toFixed(4) },
+      { label: 'Type Multiplier', formula: `${type} = ${typeMult}`, result: typeMult.toFixed(2) },
+      { label: 'Underdog Factor', formula: `gap = ${winnerStrength.toFixed(2)} - ${loserStrength.toFixed(2)}`, result: underdogFactor.toFixed(4) },
+      { label: 'Total Delta', formula: `${sharedK.toFixed(4)} × (1 - ${exp.toFixed(4)}) × ${scoreFactor.toFixed(4)} × ${typeMult} × ${underdogFactor.toFixed(4)}`, result: totalDelta.toFixed(4) }
+    ]
+  };
+}
+
+// ===================== NAVIGATION =====================
+let currentPage = 'match-math';
+let currentData = null;
+
+function navigate(page, data) {
+  currentPage = page;
+  currentData = data;
+  document.querySelectorAll('#main-nav button').forEach(b => {
+    b.classList.toggle('active', b.dataset.page === page);
+  });
+  renderPage();
+}
+
+document.getElementById('main-nav').addEventListener('click', e => {
+  const b = e.target.closest('[data-page]');
+  if (b) navigate(b.dataset.page);
+});
+
+// ===================== RENDER PAGE =====================
+function renderPage() {
+  const c = document.getElementById('page-content');
+  c.innerHTML = `<div class="loading-page"><div class="spinner"></div><span>Loading...</span></div>`;
+  switch (currentPage) {
+    case 'match-math': renderMatchMath(); break;
+    case 'player-history': renderPlayerHistory(); break;
+    case 'ledger': renderLedger(); break;
+    case 'formulas': renderFormulas(); break;
+    default: renderMatchMath();
+  }
+}
+
+// ===================== MATCH MATH PAGE =====================
+async function renderMatchMath() {
+  const c = document.getElementById('page-content');
+  try {
+    const [matchesData, usersData, playersData] = await Promise.all([dbGet('matches'), dbGet('users'), dbGet('players')]);
+    const users = usersData || {};
+    const players = playersData || {};
+    let matches = matchesData ? Object.entries(matchesData).map(([id, m]) => ({ id, ...m })) : [];
+    matches = matches.filter(m => !m.hidden && m.status === 'completed').sort((a, b) => b.timestamp - a.timestamp);
+
+    let selectedMatchId = matches[0]?.id;
+
+    function render(selectedId) {
+      const selectedMatch = matches.find(m => m.id === selectedId);
+      
+      c.innerHTML = `
+        <div class="page">
+          <h1 class="page-title">📊 <span class="accent">Match Math Explorer</span></h1>
+          <p class="page-subtitle">Select any match to see the complete step-by-step ELO calculation breakdown.</p>
+          
+          <div class="match-selector">
+            <div>
+              <div class="card">
+                <div class="card-header">
+                  <span class="card-header-title">Select Match</span>
+                  <span class="badge badge-muted">${matches.length} matches</span>
+                </div>
+                <div class="match-list" style="padding:12px">
+                  ${matches.slice(0, 50).map(m => {
+                    const isDoubles = m.matchType === 'doubles';
+                    const p1name = isDoubles ? (m.team1 || []).map(id => users[id]?.name || '?').join(' & ') : (users[m.player1]?.name || 'P1');
+                    const p2name = isDoubles ? (m.team2 || []).map(id => users[id]?.name || '?').join(' & ') : (users[m.player2]?.name || 'P2');
+                    const winner = m.winner === 1 ? p1name : p2name;
+                    return `
+                      <div class="match-item ${m.id === selectedId ? 'selected' : ''}" data-match-id="${m.id}">
+                        <div class="match-item-header">
+                          <span class="match-item-players">${esc(p1name)} vs ${esc(p2name)}</span>
+                          <span class="match-item-score">${m.score1}—${m.score2}</span>
+                        </div>
+                        <div class="match-item-meta">
+                          <span class="badge ${m.matchType === 'doubles' ? 'badge-blue' : 'badge-muted'}">${m.matchType}</span>
+                          <span class="badge badge-yellow">${m.mode}</span>
+                          <span>${timeAgo(m.timestamp)}</span>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            </div>
+            <div>
+              ${selectedMatch ? renderMatchMathDetail(selectedMatch, users, players) : '<div class="empty-state"><h3>Select a match</h3></div>'}
+            </div>
+          </div>
+        </div>`;
+
+      c.querySelectorAll('.match-item').forEach(item => {
+        item.onclick = () => render(item.dataset.matchId);
+      });
+    }
+
+    render(selectedMatchId);
+  } catch (err) {
+    c.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${esc(err.message)}</p></div>`;
+  }
+}
+
+function renderMatchMathDetail(match, users, players) {
+  const isDoubles = match.matchType === 'doubles';
+  
+  let mathHtml = '';
+  
+  if (!isDoubles) {
+    const p1name = users[match.player1]?.name || 'P1';
+    const p2name = users[match.player2]?.name || 'P2';
+    const winnerName = match.winner === 1 ? p1name : p2name;
+    const loserName = match.winner === 1 ? p2name : p1name;
+    
+    const winnerId = match.winner === 1 ? match.player1 : match.player2;
+    const loserId = match.winner === 1 ? match.player2 : match.player1;
+    const winnerElo = match.winner === 1 ? match.p1EloBefore : match.p2EloBefore;
+    const loserElo = match.winner === 1 ? match.p2EloBefore : match.p1EloBefore;
+    const winnerPhase = getPlayerPhase(players[winnerId]?.gamesPlayed || 0);
+    const loserPhase = getPlayerPhase(players[loserId]?.gamesPlayed || 0);
+    const winnerScore = Math.max(match.score1, match.score2);
+    const loserScore = Math.min(match.score1, match.score2);
+    
+    const calc = calcSinglesEloDetailed(winnerElo, loserElo, winnerScore, loserScore, match.winTo, match.mode, winnerPhase, loserPhase);
+    
+    mathHtml = `
+      <div class="card">
+        <div class="card-header">
+          <span class="card-header-title">Singles ELO Calculation</span>
+          <span class="badge badge-yellow">${match.mode}</span>
+        </div>
+        <div class="card-body">
+          <div class="info-grid">
+            <div class="info-card">
+              <div class="info-card-label">Winner</div>
+              <div class="info-card-value" style="font-size:1.2rem">${esc(winnerName)}</div>
+            </div>
+            <div class="info-card">
+              <div class="info-card-label">Winner ELO Before</div>
+              <div class="info-card-value">${fmtElo(winnerElo)}</div>
+            </div>
+            <div class="info-card">
+              <div class="info-card-label">Loser ELO Before</div>
+              <div class="info-card-value">${fmtElo(loserElo)}</div>
+            </div>
+            <div class="info-card">
+              <div class="info-card-label">Score</div>
+              <div class="info-card-value">${winnerScore}—${loserScore}</div>
+            </div>
+          </div>
+          
+          <h3 style="font-family:var(--display);font-size:1.2rem;letter-spacing:.06em;margin:20px 0 12px">Step-by-Step Calculation</h3>
+          
+          ${calc.steps.map((step, i) => `
+            <div class="math-step">
+              <div class="math-step-num">${i + 1}</div>
+              <div class="math-step-content">
+                <div class="math-step-label">${step.label}</div>
+                <div class="math-step-formula">${step.formula}</div>
+                <div class="math-step-result neutral">= ${step.result}</div>
+              </div>
+            </div>
+          `).join('')}
+          
+          <div class="section-divider"></div>
+          
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="padding:16px;background:var(--green-dim);border-radius:8px;border:1px solid rgba(57,211,83,0.2);text-align:center">
+              <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:4px">${esc(winnerName)} gains</div>
+              <div style="font-family:var(--display);font-size:2rem;color:var(--green)">+${calc.delta.toFixed(2)}</div>
+            </div>
+            <div style="padding:16px;background:var(--red-dim);border-radius:8px;border:1px solid rgba(255,53,32,0.2);text-align:center">
+              <div style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:4px">${esc(loserName)} loses</div>
+              <div style="font-family:var(--display);font-size:2rem;color:var(--red)">-${calc.delta.toFixed(2)}</div>
+            </div>
+          </div>
+          
+          <div style="margin-top:16px;padding:12px;background:var(--bg-surface);border-radius:8px;border:1px solid var(--border);font-size:.78rem;color:var(--text-secondary)">
+            <strong>Zero-sum verified:</strong> Winner gains exactly what loser loses. The shared K-factor ensures perfect conservation of total ELO.
+          </div>
+        </div>
+      </div>
+    `;
+  } else {
+    // Doubles calculation
+    const t1names = (match.team1 || []).map(id => users[id]?.name || '?');
+    const t2names = (match.team2 || []).map(id => users[id]?.name || '?');
+    const winnerNames = match.winner === 1 ? t1names : t2names;
+    const loserNames = match.winner === 1 ? t2names : t1names;
+    
+    const t1elos = (match.team1 || []).map(id => match.elosBefore?.[id] ?? ELO_BASE);
+    const t2elos = (match.team2 || []).map(id => match.elosBefore?.[id] ?? ELO_BASE);
+    const phases = [...(match.team1 || []), ...(match.team2 || [])].map(id => getPlayerPhase(players[id]?.gamesPlayed || 0));
+    
+    const winnerScore = Math.max(match.score1, match.score2);
+    const loserScore = Math.min(match.score1, match.score2);
+    
+    const calc = calcDoublesEloDetailed(t1elos, t2elos, match.winner - 1, winnerScore, loserScore, match.winTo, match.mode, phases);
+    
+    mathHtml = `
+      <div class="card">
+        <div class="card-header">
+          <span class="card-header-title">Doubles ELO Calculation</span>
+          <span class="badge badge-blue">Doubles</span>
+        </div>
+        <div class="card-body">
+          <div class="info-grid">
+            <div class="info-card">
+              <div class="info-card-label">Winning Team</div>
+              <div class="info-card-value" style="font-size:1rem">${esc(winnerNames.join(' & '))}</div>
+            </div>
+            <div class="info-card">
+              <div class="info-card-label">Losing Team</div>
+              <div class="info-card-value" style="font-size:1rem">${esc(loserNames.join(' & '))}</div>
+            </div>
+            <div class="info-card">
+              <div class="info-card-label">Score</div>
+              <div class="info-card-value">${winnerScore}—${loserScore}</div>
+            </div>
+            <div class="info-card">
+              <div class="info-card-label">Total Delta</div>
+              <div class="info-card-value">${calc.totalDelta.toFixed(2)}</div>
+            </div>
+          </div>
+          
+          <h3 style="font-family:var(--display);font-size:1.2rem;letter-spacing:.06em;margin:20px 0 12px">Step-by-Step Calculation</h3>
+          
+          ${calc.steps.map((step, i) => `
+            <div class="math-step">
+              <div class="math-step-num">${i + 1}</div>
+              <div class="math-step-content">
+                <div class="math-step-label">${step.label}</div>
+                <div class="math-step-formula">${step.formula}</div>
+                <div class="math-step-result neutral">= ${step.result}</div>
+              </div>
+            </div>
+          `).join('')}
+          
+          <div class="section-divider"></div>
+          
+          <h4 style="font-size:.8rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:12px">Individual Deltas</h4>
+          
+          <div style="display:grid;gap:8px">
+            ${(match.team1 || []).map((id, i) => {
+              const delta = match.eloDeltas?.[id] || 0;
+              const name = users[id]?.name || 'Player';
+              const won = match.winner === 1;
+              return `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg-surface);border-radius:6px;border:1px solid var(--border)">
+                  <span>${esc(name)} <span class="badge badge-yellow">T1</span></span>
+                  <span class="${delta >= 0 ? 'elo-delta-pos' : 'elo-delta-neg'}">${delta >= 0 ? '+' : ''}${delta.toFixed(2)}</span>
+                </div>
+              `;
+            }).join('')}
+            ${(match.team2 || []).map((id, i) => {
+              const delta = match.eloDeltas?.[id] || 0;
+              const name = users[id]?.name || 'Player';
+              const won = match.winner === 2;
+              return `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg-surface);border-radius:6px;border:1px solid var(--border)">
+                  <span>${esc(name)} <span class="badge badge-blue">T2</span></span>
+                  <span class="${delta >= 0 ? 'elo-delta-pos' : 'elo-delta-neg'}">${delta >= 0 ? '+' : ''}${delta.toFixed(2)}</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  
+  return mathHtml;
+}
+
+// ===================== PLAYER HISTORY PAGE =====================
+async function renderPlayerHistory() {
+  const c = document.getElementById('page-content');
+  try {
+    const [usersData, playersData, matchesData] = await Promise.all([dbGet('users'), dbGet('players'), dbGet('matches')]);
+    const users = usersData || {};
+    const players = playersData || {};
+    const matches = matchesData ? Object.entries(matchesData).map(([id, m]) => ({ id, ...m })) : [];
+    
+    const playerList = Object.entries(players)
+      .filter(([id, p]) => (p.gamesPlayed || 0) > 0)
+      .map(([id, p]) => ({ id, ...p, name: users[id]?.name || 'Unknown' }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    
+    let searchQuery = '';
+    let selectedPlayerId = null;
+
+    function render(search, selectedId) {
+      searchQuery = search;
+      selectedPlayerId = selectedId;
+      
+      const filtered = search ? playerList.filter(p => p.name.toLowerCase().includes(search.toLowerCase())) : playerList;
+      const selectedPlayer = selectedId ? playerList.find(p => p.id === selectedId) : null;
+      
+      c.innerHTML = `
+        <div class="page">
+          <h1 class="page-title">👤 <span class="accent">Player History</span></h1>
+          <p class="page-subtitle">Search for any player to see their complete match history with detailed ELO calculations.</p>
+          
+          <div class="match-selector">
+            <div>
+              <div class="card" style="margin-bottom:16px">
+                <div class="card-body" style="padding:12px">
+                  <input type="text" id="player-search" placeholder="Search players..." value="${esc(searchQuery)}" style="margin-bottom:0">
+                </div>
+              </div>
+              
+              <div class="card">
+                <div class="card-header">
+                  <span class="card-header-title">Players</span>
+                  <span class="badge badge-muted">${filtered.length}</span>
+                </div>
+                <div class="player-search-results" style="padding:12px">
+                  ${filtered.slice(0, 30).map(p => `
+                    <div class="player-item ${p.id === selectedId ? 'selected' : ''}" data-player-id="${p.id}">
+                      <span class="player-item-name">${esc(p.name)}</span>
+                      <span class="player-item-elo">${fmtElo(p.elo)}</span>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            </div>
+            <div>
+              ${selectedPlayer ? renderPlayerMatchHistory(selectedPlayer, matches, users, players) : '<div class="empty-state"><span class="emoji">🔍</span><h3>Search for a player</h3></div>'}
+            </div>
+          </div>
+        </div>`;
+
+      const searchInput = document.getElementById('player-search');
+      if (searchInput) {
+        searchInput.oninput = (e) => render(e.target.value, selectedPlayerId);
+      }
+      
+      c.querySelectorAll('.player-item').forEach(item => {
+        item.onclick = () => render(searchQuery, item.dataset.playerId);
+      });
+    }
+
+    render('', null);
+  } catch (err) {
+    c.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${esc(err.message)}</p></div>`;
+  }
+}
+
+function renderPlayerMatchHistory(player, matches, users, players) {
+  const playerMatches = matches.filter(m => 
+    m.status === 'completed' && !m.hidden && (
+      m.player1 === player.id || m.player2 === player.id ||
+      (m.team1 || []).includes(player.id) || (m.team2 || []).includes(player.id)
+    )
+  ).sort((a, b) => b.timestamp - a.timestamp);
+
+  return `
+    <div class="card">
+      <div class="card-header">
+        <span class="card-header-title">${esc(player.name)}</span>
+        <span class="badge badge-yellow">${player.wins || 0}W / ${player.losses || 0}L</span>
+      </div>
+      <div class="card-body">
+        <div class="info-grid" style="margin-bottom:20px">
+          <div class="info-card">
+            <div class="info-card-label">Current ELO</div>
+            <div class="info-card-value" style="color:var(--yellow)">${fmtElo(player.elo)}</div>
+          </div>
+          <div class="info-card">
+            <div class="info-card-label">Games Played</div>
+            <div class="info-card-value">${player.gamesPlayed || 0}</div>
+          </div>
+          <div class="info-card">
+            <div class="info-card-label">Phase</div>
+            <div class="info-card-value" style="font-size:1rem">${player.phase || 'stable'}</div>
+          </div>
+          <div class="info-card">
+            <div class="info-card-label">Best Streak</div>
+            <div class="info-card-value">${player.compStreakBest || 0}</div>
+          </div>
+        </div>
+        
+        <h4 style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:var(--text-muted);margin-bottom:12px">Match History (${playerMatches.length})</h4>
+        
+        ${playerMatches.length === 0 ? '<p style="color:var(--text-muted)">No matches found</p>' : `
+          <div style="max-height:400px;overflow-y:auto">
+            ${playerMatches.slice(0, 20).map(m => {
+              const isDoubles = m.matchType === 'doubles';
+              const won = isDoubles 
+                ? (m.winner === 1 ? (m.team1 || []).includes(player.id) : (m.team2 || []).includes(player.id))
+                : (m.winner === 1 ? m.player1 === player.id : m.player2 === player.id);
+              const delta = m.eloDeltas?.[player.id] ?? 0;
+              
+              return `
+                <div style="padding:10px 14px;background:var(--bg-surface);border-radius:6px;border:1px solid var(--border);margin-bottom:8px">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                    <span style="font-weight:700">${m.score1}—${m.score2} <span style="color:${won ? 'var(--green)' : 'var(--red)'}">${won ? 'WIN' : 'LOSS'}</span></span>
+                    <span class="${delta >= 0 ? 'elo-delta-pos' : 'elo-delta-neg'}">${delta >= 0 ? '+' : ''}${delta.toFixed(2)} ELO</span>
+                  </div>
+                  <div style="font-size:.7rem;color:var(--text-muted)">${m.mode} · ${m.matchType} · ${timeAgo(m.timestamp)}</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `}
+      </div>
+    </div>
+  `;
+}
+
+// ===================== LEDGER PAGE =====================
+async function renderLedger() {
+  const c = document.getElementById('page-content');
+  try {
+    const [usersData, playersData, ledgerData] = await Promise.all([dbGet('users'), dbGet('players'), dbGet('eloLedger')]);
+    const users = usersData || {};
+    const players = playersData || {};
+    
+    // Flatten all ledgers
+    let allTransactions = [];
+    if (ledgerData) {
+      for (const [playerId, txs] of Object.entries(ledgerData)) {
+        if (txs) {
+          for (const [txId, tx] of Object.entries(txs)) {
+            allTransactions.push({
+              id: txId,
+              playerId,
+              playerName: users[playerId]?.name || 'Unknown',
+              ...tx
+            });
+          }
+        }
+      }
+    }
+    allTransactions.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+    c.innerHTML = `
+      <div class="page">
+        <h1 class="page-title">📜 <span class="accent">ELO Ledger</span></h1>
+        <p class="page-subtitle">Complete transaction log for all ELO changes. Every gain and loss is recorded here with full transparency.</p>
+        
+        <div class="card">
+          <div class="card-header">
+            <span class="card-header-title">All Transactions</span>
+            <span class="badge badge-muted">${allTransactions.length} entries</span>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="ledger-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Player</th>
+                  <th>Before</th>
+                  <th>Delta</th>
+                  <th>After</th>
+                  <th>Match ID</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${allTransactions.slice(0, 100).map(tx => `
+                  <tr>
+                    <td style="color:var(--text-muted);font-size:.72rem">${tx.timestamp ? timeAgo(tx.timestamp) : '—'}</td>
+                    <td><strong>${esc(tx.playerName)}</strong></td>
+                    <td class="mono">${fmtElo(tx.before)}</td>
+                    <td class="mono" style="font-weight:700">${(tx.delta || 0) >= 0 ? '+' : ''}${(tx.delta || 0).toFixed(2)}</td>
+                    <td class="mono">${fmtElo(tx.after)}</td>
+                    <td style="font-family:var(--mono);font-size:.68rem;color:var(--text-muted)">${(tx.matchId || '').slice(0, 8)}...</td>
+                    <td>${tx.valid !== false ? '<span class="badge badge-green">Valid</span>' : '<span class="badge badge-red">Voided</span>'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+  } catch (err) {
+    c.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${esc(err.message)}</p></div>`;
+  }
+}
+
+// ===================== FORMULAS PAGE =====================
+function renderFormulas() {
+  const c = document.getElementById('page-content');
+  
+  c.innerHTML = `
+    <div class="page">
+      <h1 class="page-title">📐 <span class="accent">ELO Formulas</span></h1>
+      <p class="page-subtitle">Complete documentation of all mathematical formulas used in the HSR ELO system.</p>
+      
+      <div style="display:grid;gap:20px">
+        <div class="card">
+          <div class="card-header"><span class="card-header-title">1. Expected Score (Win Probability)</span></div>
+          <div class="card-body">
+            <p style="color:var(--text-secondary);font-size:.88rem;margin-bottom:12px">The logistic function determines the expected win probability for a player based on ELO difference.</p>
+            <div class="formula-box">
+              <span class="keyword">function</span> <span class="var">expectedScore</span>(eloA, eloB) {<br>
+              &nbsp;&nbsp;<span class="keyword">return</span> <span class="number">1</span> / (<span class="number">1</span> + <span class="var">Math</span>.pow(<span class="number">10</span>, (eloB - eloA) / <span class="number">4.0</span>));<br>
+              }
+            </div>
+            <p style="color:var(--text-muted);font-size:.8rem"><strong>Note:</strong> The divisor of 4.0 (instead of the standard 400) means a 2-point ELO gap corresponds to ~76% expected win rate. This makes the system more responsive to skill differences.</p>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header"><span class="card-header-title">2. K-Factor</span></div>
+          <div class="card-body">
+            <p style="color:var(--text-secondary);font-size:.88rem;margin-bottom:12px">The K-factor determines how much ELO can change per match. It varies by player phase and ELO level.</p>
+            <div class="formula-box">
+              <span class="keyword">function</span> <span class="var">getKFactor</span>(phase, currentElo) {<br>
+              &nbsp;&nbsp;<span class="keyword">let</span> base;<br>
+              &nbsp;&nbsp;<span class="keyword">if</span> (phase === <span class="var">'placement'</span>) base = <span class="number">1.8</span>;  <span class="comment">// Big swings during calibration</span><br>
+              &nbsp;&nbsp;<span class="keyword">else if</span> (phase === <span class="var">'volatile'</span>) base = <span class="number">0.9</span>;  <span class="comment">// Still calibrating</span><br>
+              &nbsp;&nbsp;<span class="keyword">else</span> base = <span class="number">0.45</span>;  <span class="comment">// Stable players</span><br>
+              <br>
+              &nbsp;&nbsp;<span class="comment">// Diminishing returns at high ELO</span><br>
+              &nbsp;&nbsp;<span class="keyword">const</span> diminish = <span class="var">Math</span>.max(<span class="number">0.3</span>, <span class="number">1</span> - <span class="var">Math</span>.pow(<span class="var">Math</span>.max(<span class="number">0</span>, currentElo - <span class="number">6</span>) / <span class="number">6</span>, <span class="number">1.5</span>) * <span class="number">0.7</span>);<br>
+              &nbsp;&nbsp;<span class="keyword">return</span> base * diminish;<br>
+              }
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header"><span class="card-header-title">3. Score Factor (Margin Multiplier)</span></div>
+          <div class="card-body">
+            <p style="color:var(--text-secondary);font-size:.88rem;margin-bottom:12px">Blowout wins earn more ELO than close games. Ranges from 0.6 (close) to 1.2 (blowout).</p>
+            <div class="formula-box">
+              <span class="keyword">function</span> <span class="var">getScoreFactor</span>(winnerScore, loserScore, maxScore) {<br>
+              &nbsp;&nbsp;<span class="keyword">const</span> margin = winnerScore - loserScore;<br>
+              &nbsp;&nbsp;<span class="keyword">const</span> normalized = margin / maxScore;<br>
+              &nbsp;&nbsp;<span class="keyword">return</span> <span class="number">0.6</span> + normalized * <span class="number">0.6</span>;  <span class="comment">// 0.6 to 1.2</span><br>
+              }
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header"><span class="card-header-title">4. Type Multiplier</span></div>
+          <div class="card-body">
+            <p style="color:var(--text-secondary);font-size:.88rem;margin-bottom:12px">Different match types have different ELO impact.</p>
+            <div class="formula-box">
+              Casual: <span class="number">0.5</span>× (50% ELO)<br>
+              Semi-Competitive: <span class="number">0.75</span>× (75% ELO)<br>
+              Competitive: <span class="number">1.0</span>× (100% ELO)<br>
+              Tournament: <span class="number">1.25</span>× (125% ELO)
+            </div>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header"><span class="card-header-title">5. Underdog Factor</span></div>
+          <div class="card-body">
+            <p style="color:var(--text-secondary);font-size:.88rem;margin-bottom:12px">When the favorite wins, ELO is compressed. When an underdog wins, ELO is amplified.</p>
+            <div class="formula-box">
+              <span class="keyword">function</span> <span class="var">getUnderdogFactor</span>(winnerElo, loserElo) {<br>
+              &nbsp;&nbsp;<span class="keyword">const</span> gap = winnerElo - loserElo;  <span class="comment">// positive = favorite won</span><br>
+              &nbsp;&nbsp;<br>
+              &nbsp;&nbsp;<span class="keyword">if</span> (gap <= <span class="number">0</span>) {<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span class="comment">// Upset! Amplify the delta</span><br>
+              &nbsp;&nbsp;&nbsp;&nbsp;<span class="keyword">return</span> <span class="var">Math</span>.min(<span class="number">2.0</span>, <span class="number">1.0</span> + <span class="var">Math</span>.abs(gap) * <span class="number">0.35</span>);<br>
+              &nbsp;&nbsp;}<br>
+              &nbsp;&nbsp;<span class="comment">// Favorite won - compress based on gap</span><br>
+              &nbsp;&nbsp;<span class="keyword">return</span> <span class="var">Math</span>.max(<span class="number">0.30</span>, <span class="number">1.0</span> - gap * <span class="number">0.15</span>);<br>
+              }
+            </div>
+            <p style="color:var(--text-muted);font-size:.8rem"><strong>Example:</strong> A 9.0 beating a 5.0 (gap = 4) gets factor 0.40 — minimal ELO gain expected. But a 5.0 beating a 9.0 (gap = -4) gets factor 2.0 — massive upset bonus!</p>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header"><span class="card-header-title">6. Final Delta (Singles)</span></div>
+          <div class="card-body">
+            <p style="color:var(--text-secondary);font-size:.88rem;margin-bottom:12px">The complete formula combining all factors.</p>
+            <div class="formula-box">
+              delta = sharedK × (<span class="number">1</span> - expectedScore) × scoreFactor × typeMult × underdogFactor<br>
+              <br>
+              <span class="comment">// Where sharedK = average of both players' K-factors</span><br>
+              sharedK = (kWinner + kLoser) / <span class="number">2</span>
+            </div>
+            <p style="color:var(--text-muted);font-size:.8rem"><strong>Zero-sum:</strong> Using the shared K guarantees the winner gains exactly what the loser loses.</p>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-header"><span class="card-header-title">7. Doubles Team Strength</span></div>
+          <div class="card-body">
+            <p style="color:var(--text-secondary);font-size:.88rem;margin-bottom:12px">Team strength uses a weighted average favoring the stronger player.</p>
+            <div class="formula-box">
+              <span class="keyword">function</span> <span class="var">calcTeamStrength</span>(eloA, eloB) {<br>
+              &nbsp;&nbsp;<span class="keyword">const</span> gap = <span class="var">Math</span>.abs(eloA - eloB);<br>
+              &nbsp;&nbsp;<span class="keyword">let</span> strongWeight;<br>
+              &nbsp;&nbsp;<span class="keyword">if</span> (gap < <span class="number">0.5</span>) strongWeight = <span class="number">0.50</span> + gap * <span class="number">0.20</span>;<br>
+              &nbsp;&nbsp;<span class="keyword">else if</span> (gap < <span class="number">1.0</span>) strongWeight = <span class="number">0.60</span> + (gap - <span class="number">0.5</span>) * <span class="number">0.10</span>;<br>
+              &nbsp;&nbsp;<span class="keyword">else</span> strongWeight = <span class="var">Math</span>.min(<span class="number">0.70</span>, <span class="number">0.65</span> + (gap - <span class="number">1.0</span>) * <span class="number">0.05</span>);<br>
+              &nbsp;&nbsp;<br>
+              &nbsp;&nbsp;<span class="keyword">const</span> [high, low] = eloA >= eloB ? [eloA, eloB] : [eloB, eloA];<br>
+              &nbsp;&nbsp;<span class="keyword">return</span> high * strongWeight + low * (<span class="number">1</span> - strongWeight);<br>
+              }
+            </div>
+            <p style="color:var(--text-muted);font-size:.8rem"><strong>Why:</strong> A strong player carrying a weak partner has more impact than a simple average would suggest. This prevents exploiting the system by pairing a high ELO with a low ELO "mule".</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ===================== INIT =====================
+window.navigate = navigate;
+renderPage();
+</script>
+</body>
+</html>
